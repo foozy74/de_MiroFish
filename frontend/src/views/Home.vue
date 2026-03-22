@@ -5,7 +5,7 @@
       <div class="nav-brand">MIROFISH</div>
       <div class="nav-links">
         <a href="https://github.com/666ghj/MiroFish" target="_blank" class="github-link">
-          访问我们的Github主页 <span class="arrow">↗</span>
+          Zu unserem GitHub <span class="arrow">↗</span>
         </a>
       </div>
     </nav>
@@ -15,21 +15,21 @@
       <section class="hero-section">
         <div class="hero-left">
           <div class="tag-row">
-            <span class="orange-tag">简洁通用的群体智能引擎</span>
-            <span class="version-text">/ v0.1-预览版</span>
+            <span class="orange-tag">Universelle Schwarm-Intelligenz-Engine</span>
+            <span class="version-text">/ v0.1-Vorschau</span>
           </div>
           
           <h1 class="main-title">
-            上传任意报告<br>
-            <span class="gradient-text">即刻推演未来</span>
+            Beliebigen Bericht hochladen<br>
+            <span class="gradient-text">Zukunft sofort simulieren</span>
           </h1>
           
           <div class="hero-desc">
             <p>
-              即使只有一段文字，<span class="highlight-bold">MiroFish</span> 也能基于其中的现实种子，全自动生成与之对应的至多<span class="highlight-orange">百万级Agent</span>构成的平行世界。通过上帝视角注入变量，在复杂的群体交互中寻找动态环境下的<span class="highlight-code">“局部最优解”</span>
+              Selbst aus einem einzelnen Textabschnitt kann <span class=”highlight-bold”>MiroFish</span> vollautomatisch eine Parallelwelt mit bis zu <span class=”highlight-orange”>einer Million Agenten</span> generieren. Durch gezielte Variableneinspeisung aus der Vogelperspektive wird in komplexen Gruppeninteraktionen ein <span class=”highlight-code”>”lokales Optimum”</span> im dynamischen Umfeld gesucht.
             </p>
-            <p class="slogan-text">
-              让未来在 Agent 群中预演，让决策在百战后胜出<span class="blinking-cursor">_</span>
+            <p class=”slogan-text”>
+              Die Zukunft in Agent-Schwärmen proben – Entscheidungen nach hundert Schlachten gewinnen<span class=”blinking-cursor”>_</span>
             </p>
           </div>
            
@@ -53,65 +53,65 @@
         <!-- 左栏：状态与步骤 -->
         <div class="left-panel">
           <div class="panel-header">
-            <span class="status-dot">■</span> 系统状态
+            <span class="status-dot">■</span> Systemstatus
           </div>
           
-          <h2 class="section-title">准备就绪</h2>
+          <h2 class="section-title">Bereit</h2>
           <p class="section-desc">
-            预测引擎待命中，可上传多份非结构化数据以初始化模拟序列
+            Prognose-Engine wartet – mehrere unstrukturierte Datendateien hochladen, um die Simulationssequenz zu initialisieren
           </p>
           
           <!-- 数据指标卡片 -->
           <div class="metrics-row">
             <div class="metric-card">
-              <div class="metric-value">低成本</div>
-              <div class="metric-label">常规模拟平均5$/次</div>
+              <div class="metric-value">Günstig</div>
+              <div class="metric-label">Ø 5 $ pro Simulation</div>
             </div>
             <div class="metric-card">
-              <div class="metric-value">高可用</div>
-              <div class="metric-label">最多百万级Agent模拟</div>
+              <div class="metric-value">Skalierbar</div>
+              <div class="metric-label">Bis zu 1 Mio. Agenten</div>
             </div>
           </div>
 
           <!-- 项目模拟步骤介绍 (新增区域) -->
           <div class="steps-container">
             <div class="steps-header">
-               <span class="diamond-icon">◇</span> 工作流序列
+               <span class="diamond-icon">◇</span> Workflow-Sequenz
             </div>
             <div class="workflow-list">
               <div class="workflow-item">
                 <span class="step-num">01</span>
                 <div class="step-info">
-                  <div class="step-title">图谱构建</div>
-                  <div class="step-desc">现实种子提取 & 个体与群体记忆注入 & GraphRAG构建</div>
+                  <div class="step-title">Graphaufbau</div>
+                  <div class="step-desc">Realitätskerne extrahieren & Einzel-/Gruppengedächtnis einbinden & GraphRAG aufbauen</div>
                 </div>
               </div>
               <div class="workflow-item">
                 <span class="step-num">02</span>
                 <div class="step-info">
-                  <div class="step-title">环境搭建</div>
-                  <div class="step-desc">实体关系抽取 & 人设生成 & 环境配置Agent注入仿真参数</div>
+                  <div class="step-title">Umgebungsaufbau</div>
+                  <div class="step-desc">Entitätsbeziehungen extrahieren & Personas generieren & Simulationsparameter einbinden</div>
                 </div>
               </div>
               <div class="workflow-item">
                 <span class="step-num">03</span>
                 <div class="step-info">
-                  <div class="step-title">开始模拟</div>
-                  <div class="step-desc">双平台并行模拟 & 自动解析预测需求 & 动态更新时序记忆</div>
+                  <div class="step-title">Simulation starten</div>
+                  <div class="step-desc">Parallelsimulation auf zwei Plattformen & automatische Prognoseanalyse & dynamisches Gedächtnisupdate</div>
                 </div>
               </div>
               <div class="workflow-item">
                 <span class="step-num">04</span>
                 <div class="step-info">
-                  <div class="step-title">报告生成</div>
-                  <div class="step-desc">ReportAgent拥有丰富的工具集与模拟后环境进行深度交互</div>
+                  <div class="step-title">Bericht generieren</div>
+                  <div class="step-desc">ReportAgent mit umfangreichem Werkzeugset interagiert mit der Post-Simulations-Umgebung</div>
                 </div>
               </div>
               <div class="workflow-item">
                 <span class="step-num">05</span>
                 <div class="step-info">
-                  <div class="step-title">深度互动</div>
-                  <div class="step-desc">与模拟世界中的任意一位进行对话 & 与ReportAgent进行对话</div>
+                  <div class="step-title">Tiefe Interaktion</div>
+                  <div class="step-desc">Mit beliebiger Entität der simulierten Welt chatten & mit dem ReportAgent chatten</div>
                 </div>
               </div>
             </div>
@@ -124,8 +124,8 @@
             <!-- 上传区域 -->
             <div class="console-section">
               <div class="console-header">
-                <span class="console-label">01 / 现实种子</span>
-                <span class="console-meta">支持格式: PDF, MD, TXT</span>
+                <span class="console-label">01 / Realitätskerne</span>
+                <span class="console-meta">Unterstützte Formate: PDF, MD, TXT</span>
               </div>
               
               <div 
@@ -148,8 +148,8 @@
                 
                 <div v-if="files.length === 0" class="upload-placeholder">
                   <div class="upload-icon">↑</div>
-                  <div class="upload-title">拖拽文件上传</div>
-                  <div class="upload-hint">或点击浏览文件系统</div>
+                  <div class="upload-title">Dateien hierher ziehen</div>
+                  <div class="upload-hint">oder klicken zum Durchsuchen</div>
                 </div>
                 
                 <div v-else class="file-list">
@@ -164,23 +164,23 @@
 
             <!-- 分割线 -->
             <div class="console-divider">
-              <span>输入参数</span>
+              <span>Parameter eingeben</span>
             </div>
 
             <!-- 输入区域 -->
             <div class="console-section">
               <div class="console-header">
-                <span class="console-label">>_ 02 / 模拟提示词</span>
+                <span class="console-label">>_ 02 / Simulationsanweisung</span>
               </div>
               <div class="input-wrapper">
                 <textarea
                   v-model="formData.simulationRequirement"
                   class="code-input"
-                  placeholder="// 用自然语言输入模拟或预测需求（例.武大若发布撤销肖某处分的公告，会引发什么舆情走向）"
+                  placeholder="// Simulations- oder Prognoseanforderung in natürlicher Sprache eingeben (z. B.: Wenn Maßnahme X zurückgenommen wird, welche öffentliche Reaktion ist zu erwarten?)"
                   rows="6"
                   :disabled="loading"
                 ></textarea>
-                <div class="model-badge">引擎: MiroFish-V1.0</div>
+                <div class="model-badge">Engine: MiroFish-V1.0</div>
               </div>
             </div>
 
@@ -191,8 +191,8 @@
                 @click="startSimulation"
                 :disabled="!canSubmit || loading"
               >
-                <span v-if="!loading">启动引擎</span>
-                <span v-else>初始化中...</span>
+                <span v-if="!loading">Engine starten</span>
+                <span v-else>Initialisierung...</span>
                 <span class="btn-arrow">→</span>
               </button>
             </div>
@@ -213,23 +213,23 @@ import HistoryDatabase from '../components/HistoryDatabase.vue'
 
 const router = useRouter()
 
-// 表单数据
+// Formulardaten
 const formData = ref({
   simulationRequirement: ''
 })
 
-// 文件列表
+// Dateiliste
 const files = ref([])
 
-// 状态
+// Zustand
 const loading = ref(false)
 const error = ref('')
 const isDragOver = ref(false)
 
-// 文件输入引用
+// Referenz auf Datei-Input
 const fileInput = ref(null)
 
-// 计算属性:是否可以提交
+// Computed: Kann abgesendet werden?
 const canSubmit = computed(() => {
   return formData.value.simulationRequirement.trim() !== '' && files.value.length > 0
 })

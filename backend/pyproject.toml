@@ -32,6 +32,13 @@ dependencies = [
     # 工具库
     "python-dotenv>=1.0.0",
     "pydantic>=2.0.0",
+
+    # JWT-Validierung (Clerk, RS256) + AES-256-GCM API-Key-Verschlüsselung
+    "PyJWT[crypto]>=2.8.0",
+    "cryptography>=42.0.0",
+
+    # PostgreSQL-Client (Tenant-Middleware, sync)
+    "psycopg[binary]>=3.1.0",
 ]
 
 [project.optional-dependencies]

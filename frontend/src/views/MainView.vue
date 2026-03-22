@@ -15,7 +15,7 @@
             :class="{ active: viewMode === mode }"
             @click="viewMode = mode"
           >
-            {{ { graph: '图谱', split: '双栏', workbench: '工作台' }[mode] }}
+            {{ { graph: 'Graph', split: 'Zwei Spalten', workbench: 'Werkbank' }[mode] }}
           </button>
         </div>
       </div>
@@ -90,8 +90,8 @@ const router = useRouter()
 const viewMode = ref('split') // graph | split | workbench
 
 // Step State
-const currentStep = ref(1) // 1: 图谱构建, 2: 环境搭建, 3: 开始模拟, 4: 报告生成, 5: 深度互动
-const stepNames = ['图谱构建', '环境搭建', '开始模拟', '报告生成', '深度互动']
+const currentStep = ref(1) // 1: Graphaufbau, 2: Umgebungsaufbau, 3: Simulation starten, 4: Bericht generieren, 5: Tiefe Interaktion
+const stepNames = ['Graphaufbau', 'Umgebungsaufbau', 'Simulation starten', 'Bericht generieren', 'Tiefe Interaktion']
 
 // Data State
 const currentProjectId = ref(route.params.projectId)
@@ -159,11 +159,11 @@ const toggleMaximize = (target) => {
 const handleNextStep = (params = {}) => {
   if (currentStep.value < 5) {
     currentStep.value++
-    addLog(`进入 Step ${currentStep.value}: ${stepNames[currentStep.value - 1]}`)
+    addLog(`Eintritt in Schritt ${currentStep.value}: ${stepNames[currentStep.value - 1]}`)
     
     // 如果是从 Step 2 进入 Step 3，记录模拟轮数配置
     if (currentStep.value === 3 && params.maxRounds) {
-      addLog(`自定义模拟轮数: ${params.maxRounds} 轮`)
+      addLog(`Benutzerdefinierte Simulationsrunden: ${params.maxRounds}`)
     }
   }
 }
@@ -171,7 +171,7 @@ const handleNextStep = (params = {}) => {
 const handleGoBack = () => {
   if (currentStep.value > 1) {
     currentStep.value--
-    addLog(`返回 Step ${currentStep.value}: ${stepNames[currentStep.value - 1]}`)
+    addLog(`Zurück zu Schritt ${currentStep.value}: ${stepNames[currentStep.value - 1]}`)
   }
 }
 
