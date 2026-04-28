@@ -3,7 +3,17 @@
     <!-- 顶部导航栏 -->
     <nav class="navbar">
       <div class="nav-brand">MIROFISH</div>
-      <div class="nav-links"></div>
+      <div class="nav-links">
+        <SignedOut>
+          <router-link to="/login" class="login-btn">Anmelden</router-link>
+        </SignedOut>
+        <SignedIn>
+          <div class="user-control">
+            <router-link to="/settings" class="settings-link">Einstellungen</router-link>
+            <UserButton after-sign-out-url="/" />
+          </div>
+        </SignedIn>
+      </div>
     </nav>
 
     <div class="main-content">
@@ -205,6 +215,7 @@
 <script setup>
 import { computed, ref } from "vue";
 import { useRouter } from "vue-router";
+import { SignedIn, SignedOut, UserButton } from '@clerk/vue'
 
 const router = useRouter();
 
@@ -343,6 +354,41 @@ const startSimulation = () => {
 .nav-links {
   display: flex;
   align-items: center;
+  gap: 20px;
+}
+
+.login-btn {
+  background: rgba(125, 211, 192, 0.1);
+  border: 1px solid rgba(125, 211, 192, 0.3);
+  color: var(--accent-teal);
+  padding: 8px 20px;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: all 0.2s;
+}
+
+.login-btn:hover {
+  background: rgba(125, 211, 192, 0.2);
+  transform: translateY(-1px);
+}
+
+.user-control {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.settings-link {
+  color: var(--text-secondary);
+  text-decoration: none;
+  font-size: 0.85rem;
+  transition: color 0.2s;
+}
+
+.settings-link:hover {
+  color: var(--accent-teal);
 }
 
 .github-link {
