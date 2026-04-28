@@ -3,6 +3,14 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 
+# Build-Argumente definieren (Coolify reicht diese durch)
+ARG VITE_CLERK_PUBLISHABLE_KEY
+ARG VITE_API_BASE_URL
+
+# Diese Argumente als Umgebungsvariablen für den Build-Prozess setzen
+ENV VITE_CLERK_PUBLISHABLE_KEY=$VITE_CLERK_PUBLISHABLE_KEY
+ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
+
 COPY package.json package-lock.json ./
 RUN npm ci
 
