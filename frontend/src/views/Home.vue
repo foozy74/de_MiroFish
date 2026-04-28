@@ -32,10 +32,10 @@
           
           <div class="hero-desc">
             <p>
-              Selbst aus einem einzelnen Textabschnitt kann <span class=”highlight-bold”>MiroFish</span> vollautomatisch eine Parallelwelt mit bis zu <span class=”highlight-orange”>einer Million Agenten</span> generieren. Durch gezielte Variableneinspeisung aus der Vogelperspektive wird in komplexen Gruppeninteraktionen ein <span class=”highlight-code”>”lokales Optimum”</span> im dynamischen Umfeld gesucht.
+              Selbst aus einem einzelnen Textabschnitt kann <span class="highlight-bold">MiroFish</span> vollautomatisch eine Parallelwelt mit bis zu <span class="highlight-orange">einer Million Agenten</span> generieren. Durch gezielte Variableneinspeisung aus der Vogelperspektive wird in komplexen Gruppeninteraktionen ein <span class="highlight-code">"lokales Optimum"</span> im dynamischen Umfeld gesucht.
             </p>
-            <p class=”slogan-text”>
-              Die Zukunft in Agent-Schwärmen proben – Entscheidungen nach hundert Schlachten gewinnen<span class=”blinking-cursor”>_</span>
+            <p class="slogan-text">
+              Die Zukunft in Agent-Schwärmen proben – Entscheidungen nach hundert Schlachten gewinnen<span class="blinking-cursor">_</span>
             </p>
           </div>
            
