@@ -1,6 +1,5 @@
 """
-LLM客户端封装
-统一使用OpenAI格式调用
+LLM-Client-Konfiguration
 """
 
 import json
@@ -8,48 +7,70 @@ import re
 from typing import Optional, Dict, Any, List
 from openai import OpenAI
 
-from ..config import Config
 
 
 class LLMClient:
-    """LLM客户端"""
+    """LLM-Client"""
     
     def __init__(
         self,
-        api_key: Optional[str] = None,
-        base_url: Optional[str] = None,
-        model: Optional[str] = None
+        api_key: str = None,
+        base_url: str = None,
+        model: str = None,
+        temperature: float = 0.3,
+        max_tokens: int = 4096,
+        timeout: int = 120
     ):
-        self.api_key = api_key or Config.LLM_API_KEY
-        self.base_url = base_url or Config.LLM_BASE_URL
-        self.model = model or Config.LLM_MODEL_NAME
+        """
+        Initialisiert den LLM-Client.
+
+        Args:
+            api_key: API-Schlüssel (optional, falls als Umgebungsvariable gesetzt)
+            base_url: API-Basis-URL
+            model: Modellname
+            temperature: Temperaturparameter
+            max_tokens: Maximale Token-Anzahl
+            timeout: Timeout in Sekunden
+        """
+        # Lazy Import um Zirkelabhängigkeiten zu vermeiden
+        from app.tenant.settings_override import TenantConfig
+        
+        cfg = TenantConfig()
+        
+        self.api_key = api_key or cfg.LLM_API_KEY
+        self.base_url = base_url or cfg.LLM_BASE_URL
+        self.model = model or cfg.LLM_MODEL_NAME
+        self.temperature = temperature
+        self.max_tokens = max_tokens
+        self.timeout = timeout
         
         if not self.api_key:
-            raise ValueError("LLM_API_KEY 未配置")
-        
+            raise ValueError("LLM_API_KEY ist nicht konfiguriert")
+            
         self.client = OpenAI(
             api_key=self.api_key,
-            base_url=self.base_url
+            base_url=self.base_url,
+            timeout=self.timeout
         )
     
     def chat(
         self,
         messages: List[Dict[str, str]],
-        temperature: float = 0.7,
+        temperature: float = 0.3,
         max_tokens: int = 4096,
-        response_format: Optional[Dict] = None
+        response_format: Optional[Dict[str, str]] = None
     ) -> str:
         """
-        发送聊天请求
+        Sendet Chat-Anfrage
         
         Args:
-            messages: 消息列表
-            temperature: 温度参数
-            max_tokens: 最大token数
-            response_format: 响应格式（如JSON模式）
+            messages: Nachrichtenliste
+            temperature: Temperaturparameter
+            max_tokens: Maximale Token-Anzahl
+            response_format: Antwortformat (z.B. JSON-Modus)
             
         Returns:
-            模型响应文本
+            Modell-Antworttext
         """
         kwargs = {
             "model": self.model,
@@ -63,7 +84,7 @@ class LLMClient:
         
         response = self.client.chat.completions.create(**kwargs)
         content = response.choices[0].message.content
-        # 部分模型（如MiniMax M2.5）会在content中包含<think>思考内容，需要移除
+        # Einige Modelle (wie MiniMax M2.5) enthalten思考内容 im content, die entfernt werden müssen
         content = re.sub(r'<think>[\s\S]*?</think>', '', content).strip()
         return content
     
@@ -74,15 +95,15 @@ class LLMClient:
         max_tokens: int = 4096
     ) -> Dict[str, Any]:
         """
-        发送聊天请求并返回JSON
-        
+        Sendet eine Chat-Anfrage und gibt JSON zurück.
+
         Args:
-            messages: 消息列表
-            temperature: 温度参数
-            max_tokens: 最大token数
-            
+            messages: Nachrichtenliste
+            temperature: Temperaturparameter
+            max_tokens: Maximale Token-Anzahl
+
         Returns:
-            解析后的JSON对象
+            Analysiertes JSON-Objekt
         """
         response = self.chat(
             messages=messages,
@@ -90,7 +111,7 @@ class LLMClient:
             max_tokens=max_tokens,
             response_format={"type": "json_object"}
         )
-        # 清理markdown代码块标记
+        # Markdown-Codeblock-Marker bereinigen
         cleaned_response = response.strip()
         cleaned_response = re.sub(r'^```(?:json)?\s*\n?', '', cleaned_response, flags=re.IGNORECASE)
         cleaned_response = re.sub(r'\n?```\s*$', '', cleaned_response)
@@ -99,5 +120,4 @@ class LLMClient:
         try:
             return json.loads(cleaned_response)
         except json.JSONDecodeError:
-            raise ValueError(f"LLM返回的JSON格式无效: {cleaned_response}")
-
+            raise ValueError(f"Ungültiges JSON-Format vom LLM zurückgegeben: {cleaned_response}")

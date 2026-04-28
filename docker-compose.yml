@@ -1,14 +1,67 @@
 services:
-  mirofish:
-    image: ghcr.io/666ghj/mirofish:latest
-    # 加速镜像（如拉取缓慢可替换上方地址）
-    # image: ghcr.nju.edu.cn/666ghj/mirofish:latest
-    container_name: mirofish
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: mirofish-backend
     env_file:
       - .env
+    environment:
+      - UV_SYSTEM_PYTHON=1
+    ports:
+      - "5001:5001"
+    volumes:
+      - ./backend/uploads:/app/uploads
+      - ./backend/logs:/app/logs
+      - /app/.venv
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    deploy:
+      resources:
+        limits:
+          cpus: "2.0"
+          memory: 4G
+        reservations:
+          cpus: "0.5"
+          memory: 1G
+    networks:
+      - mirofish-net
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: mirofish-frontend
+    depends_on:
+      backend:
+        condition: service_healthy
     ports:
       - "3000:3000"
-      - "5001:5001"
     restart: unless-stopped
-    volumes:
-      - ./backend/uploads:/app/backend/uploads
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3000"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 512M
+        reservations:
+          cpus: "0.25"
+          memory: 256M
+    networks:
+      - mirofish-net
+
+# Volumes are now bind-mounted for local testing
+
+networks:
+  mirofish-net:
+    driver: bridge

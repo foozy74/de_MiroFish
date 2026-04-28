@@ -21,6 +21,9 @@ RUN printf 'server {\n\
     root /usr/share/nginx/html;\n\
     index index.html;\n\
 \n\
+    # Resolver für Docker DNS\n\
+    resolver 127.0.0.11 valid=30s;\n\
+\n\
     # Vue Router — alle Pfade auf index.html\n\
     location / {\n\
         try_files $uri $uri/ /index.html;\n\
@@ -28,7 +31,8 @@ RUN printf 'server {\n\
 \n\
     # API-Proxy → MiroFish Backend\n\
     location /api/ {\n\
-        proxy_pass         http://mirofish-backend:5001/api/;\n\
+        set $upstream_backend backend;\n\
+        proxy_pass         http://$upstream_backend:5001/api/;\n\
         proxy_set_header   Host              $host;\n\
         proxy_set_header   X-Real-IP         $remote_addr;\n\
         proxy_set_header   X-Forwarded-For   $proxy_add_x_forwarded_for;\n\

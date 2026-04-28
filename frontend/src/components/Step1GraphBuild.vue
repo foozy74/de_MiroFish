@@ -6,25 +6,25 @@
         <div class="card-header">
           <div class="step-info">
             <span class="step-num">01</span>
-            <span class="step-title">本体生成</span>
+            <span class="step-title">Ontologie-Generierung</span>
           </div>
           <div class="step-status">
-            <span v-if="currentPhase > 0" class="badge success">已完成</span>
-            <span v-else-if="currentPhase === 0" class="badge processing">生成中</span>
-            <span v-else class="badge pending">等待</span>
+            <span v-if="currentPhase > 0" class="badge success">Abgeschlossen</span>
+            <span v-else-if="currentPhase === 0" class="badge processing">Läuft</span>
+            <span v-else class="badge pending">Wartend</span>
           </div>
         </div>
         
         <div class="card-content">
           <p class="api-note">POST /api/graph/ontology/generate</p>
           <p class="description">
-            LLM分析文档内容与模拟需求，提取出现实种子，自动生成合适的本体结构
+            Das LLM analysiert den Dokumentinhalt und die Simulationsanforderungen, extrahiert reale Seeds und generiert automatisch eine passende Ontologiestruktur.
           </p>
 
           <!-- Loading / Progress -->
           <div v-if="currentPhase === 0 && ontologyProgress" class="progress-section">
             <div class="spinner-sm"></div>
-            <span>{{ ontologyProgress.message || '正在分析文档...' }}</span>
+            <span>{{ ontologyProgress.message || 'Dokumente werden analysiert...' }}</span>
           </div>
 
           <!-- Detail Overlay -->
@@ -110,34 +110,34 @@
         <div class="card-header">
           <div class="step-info">
             <span class="step-num">02</span>
-            <span class="step-title">GraphRAG构建</span>
+            <span class="step-title">GraphRAG-Aufbau</span>
           </div>
           <div class="step-status">
-            <span v-if="currentPhase > 1" class="badge success">已完成</span>
+            <span v-if="currentPhase > 1" class="badge success">Abgeschlossen</span>
             <span v-else-if="currentPhase === 1" class="badge processing">{{ buildProgress?.progress || 0 }}%</span>
-            <span v-else class="badge pending">等待</span>
+            <span v-else class="badge pending">Wartend</span>
           </div>
         </div>
 
         <div class="card-content">
           <p class="api-note">POST /api/graph/build</p>
           <p class="description">
-            基于生成的本体，将文档自动分块后调用 Zep 构建知识图谱，提取实体和关系，并形成时序记忆与社区摘要
+            Basierend auf der generierten Ontologie werden Dokumente automatisch segmentiert und Zep aufgerufen, um eine Wissensgraph aufzubauen, Entitäten und Beziehungen zu extrahieren und zeitliche Erinnerungen sowie Community-Zusammenfassungen zu erstellen.
           </p>
           
           <!-- Stats Cards -->
           <div class="stats-grid">
             <div class="stat-card">
               <span class="stat-value">{{ graphStats.nodes }}</span>
-              <span class="stat-label">实体节点</span>
+              <span class="stat-label">Entitätsknoten</span>
             </div>
             <div class="stat-card">
               <span class="stat-value">{{ graphStats.edges }}</span>
-              <span class="stat-label">关系边</span>
+              <span class="stat-label">Beziehungskanten</span>
             </div>
             <div class="stat-card">
               <span class="stat-value">{{ graphStats.types }}</span>
-              <span class="stat-label">SCHEMA类型</span>
+              <span class="stat-label">Schema-Typen</span>
             </div>
           </div>
         </div>
@@ -148,23 +148,23 @@
         <div class="card-header">
           <div class="step-info">
             <span class="step-num">03</span>
-            <span class="step-title">构建完成</span>
+            <span class="step-title">Aufbau abgeschlossen</span>
           </div>
           <div class="step-status">
-            <span v-if="currentPhase >= 2" class="badge accent">进行中</span>
+            <span v-if="currentPhase >= 2" class="badge accent">Läuft</span>
           </div>
         </div>
         
         <div class="card-content">
           <p class="api-note">POST /api/simulation/create</p>
-          <p class="description">图谱构建已完成，请进入下一步进行模拟环境搭建</p>
+          <p class="description">Der Graph-Aufbau ist abgeschlossen. Bitte fahren Sie mit dem nächsten Schritt fort, um die Simulationsumgebung einzurichten.</p>
           <button 
             class="action-btn" 
             :disabled="currentPhase < 2 || creatingSimulation"
             @click="handleEnterEnvSetup"
           >
             <span v-if="creatingSimulation" class="spinner-sm"></span>
-            {{ creatingSimulation ? '创建中...' : '进入环境搭建 ➝' }}
+            {{ creatingSimulation ? 'Wird erstellt...' : 'Zur Umgebungseinrichtung ➝' }}
           </button>
         </div>
       </div>
@@ -187,11 +187,11 @@
 </template>
 
 <script setup>
-import { computed, ref, watch, nextTick } from 'vue'
-import { useRouter } from 'vue-router'
-import { createSimulation } from '../api/simulation'
+import { computed, nextTick, ref, watch } from "vue";
+import { useRouter } from "vue-router";
+import { createSimulation } from "../api/simulation";
 
-const router = useRouter()
+const router = useRouter();
 
 const props = defineProps({
   currentPhase: { type: Number, default: 0 },
@@ -199,85 +199,96 @@ const props = defineProps({
   ontologyProgress: Object,
   buildProgress: Object,
   graphData: Object,
-  systemLogs: { type: Array, default: () => [] }
-})
+  systemLogs: { type: Array, default: () => [] },
+});
 
-defineEmits(['next-step'])
+defineEmits(["next-step"]);
 
-const selectedOntologyItem = ref(null)
-const logContent = ref(null)
-const creatingSimulation = ref(false)
+const selectedOntologyItem = ref(null);
+const logContent = ref(null);
+const creatingSimulation = ref(false);
 
 // 进入环境搭建 - 创建 simulation 并跳转
 const handleEnterEnvSetup = async () => {
-  if (!props.projectData?.project_id || !props.projectData?.graph_id) {
-    console.error('缺少项目或图谱信息')
-    return
+  if (!(props.projectData?.project_id && props.projectData?.graph_id)) {
+    console.error("缺少项目或图谱信息");
+    return;
   }
-  
-  creatingSimulation.value = true
-  
+
+  creatingSimulation.value = true;
+
   try {
     const res = await createSimulation({
       project_id: props.projectData.project_id,
       graph_id: props.projectData.graph_id,
       enable_twitter: true,
-      enable_reddit: true
-    })
-    
+      enable_reddit: true,
+    });
+
     if (res.success && res.data?.simulation_id) {
       // 跳转到 simulation 页面
       router.push({
-        name: 'Simulation',
-        params: { simulationId: res.data.simulation_id }
-      })
+        name: "Simulation",
+        params: { simulationId: res.data.simulation_id },
+      });
     } else {
-      console.error('创建模拟失败:', res.error)
-      alert('创建模拟失败: ' + (res.error || '未知错误'))
+      console.error("创建模拟失败:", res.error);
+      alert("创建模拟失败: " + (res.error || "未知错误"));
     }
   } catch (err) {
-    console.error('创建模拟异常:', err)
-    alert('创建模拟异常: ' + err.message)
+    console.error("创建模拟异常:", err);
+    alert("创建模拟异常: " + err.message);
   } finally {
-    creatingSimulation.value = false
+    creatingSimulation.value = false;
   }
-}
+};
 
 const selectOntologyItem = (item, type) => {
-  selectedOntologyItem.value = { ...item, itemType: type }
-}
+  selectedOntologyItem.value = { ...item, itemType: type };
+};
 
 const graphStats = computed(() => {
-  const nodes = props.graphData?.node_count || props.graphData?.nodes?.length || 0
-  const edges = props.graphData?.edge_count || props.graphData?.edges?.length || 0
-  const types = props.projectData?.ontology?.entity_types?.length || 0
-  return { nodes, edges, types }
-})
+  const nodes =
+    props.graphData?.node_count || props.graphData?.nodes?.length || 0;
+  const edges =
+    props.graphData?.edge_count || props.graphData?.edges?.length || 0;
+  const types = props.projectData?.ontology?.entity_types?.length || 0;
+  return { nodes, edges, types };
+});
 
 const formatDate = (dateStr) => {
-  if (!dateStr) return '--:--:--'
-  const d = new Date(dateStr)
-  return d.toLocaleTimeString('en-US', { hour12: false }) + '.' + d.getMilliseconds()
-}
+  if (!dateStr) {
+    return "--:--:--";
+  }
+  const d = new Date(dateStr);
+  return (
+    d.toLocaleTimeString("en-US", { hour12: false }) + "." + d.getMilliseconds()
+  );
+};
 
 // Auto-scroll logs
-watch(() => props.systemLogs.length, () => {
-  nextTick(() => {
-    if (logContent.value) {
-      logContent.value.scrollTop = logContent.value.scrollHeight
-    }
-  })
-})
+watch(
+  () => props.systemLogs.length,
+  () => {
+    nextTick(() => {
+      if (logContent.value) {
+        logContent.value.scrollTop = logContent.value.scrollHeight;
+      }
+    });
+  }
+);
 </script>
 
 <style scoped>
 .workbench-panel {
   height: 100%;
-  background-color: #FAFAFA;
+  background-color: #0a0f1a;
   display: flex;
   flex-direction: column;
   position: relative;
   overflow: hidden;
+  font-family: 'Inter', sans-serif;
+  color: #e8f1f5;
 }
 
 .scroll-container {
@@ -290,13 +301,13 @@ watch(() => props.systemLogs.length, () => {
 }
 
 .step-card {
-  background: #FFF;
-  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(12px);
+  border-radius: 16px;
   padding: 20px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
-  border: 1px solid #EAEAEA;
+  border: 1px solid rgba(125, 211, 192, 0.15);
   transition: all 0.3s ease;
-  position: relative; /* For absolute overlay */
+  position: relative;
 }
 
 .step-card.active {
@@ -321,18 +332,19 @@ watch(() => props.systemLogs.length, () => {
   font-family: 'JetBrains Mono', monospace;
   font-size: 20px;
   font-weight: 700;
-  color: #E0E0E0;
+  color: #8899a6;
 }
 
 .step-card.active .step-num,
 .step-card.completed .step-num {
-  color: #000;
+  color: #7dd3c0;
 }
 
 .step-title {
   font-weight: 600;
   font-size: 14px;
   letter-spacing: 0.5px;
+  color: #e8f1f5;
 }
 
 .badge {
@@ -341,23 +353,24 @@ watch(() => props.systemLogs.length, () => {
   border-radius: 4px;
   font-weight: 600;
   text-transform: uppercase;
+  font-family: 'JetBrains Mono', monospace;
 }
 
-.badge.success { background: #E8F5E9; color: #2E7D32; }
-.badge.processing { background: #FF5722; color: #FFF; }
-.badge.accent { background: #FF5722; color: #FFF; }
-.badge.pending { background: #F5F5F5; color: #999; }
+.badge.success { background: rgba(125, 211, 192, 0.2); color: #7dd3c0; border: 1px solid rgba(125, 211, 192, 0.3); }
+.badge.processing { background: rgba(91, 155, 213, 0.2); color: #5b9bd5; border: 1px solid rgba(91, 155, 213, 0.3); }
+.badge.accent { background: rgba(91, 155, 213, 0.2); color: #5b9bd5; border: 1px solid rgba(91, 155, 213, 0.3); }
+.badge.pending { background: rgba(136, 153, 166, 0.2); color: #8899a6; border: 1px solid rgba(136, 153, 166, 0.3); }
 
 .api-note {
   font-family: 'JetBrains Mono', monospace;
   font-size: 10px;
-  color: #999;
+  color: #8899a6;
   margin-bottom: 8px;
 }
 
 .description {
   font-size: 12px;
-  color: #666;
+  color: #8899a6;
   line-height: 1.5;
   margin-bottom: 16px;
 }
@@ -573,9 +586,10 @@ watch(() => props.systemLogs.length, () => {
   display: grid;
   grid-template-columns: 1fr 1fr 1fr;
   gap: 12px;
-  background: #F9F9F9;
+  background: rgba(0, 0, 0, 0.2);
   padding: 16px;
-  border-radius: 6px;
+  border-radius: 12px;
+  border: 1px solid rgba(125, 211, 192, 0.15);
 }
 
 .stat-card {
@@ -586,13 +600,13 @@ watch(() => props.systemLogs.length, () => {
   display: block;
   font-size: 20px;
   font-weight: 700;
-  color: #000;
+  color: #7dd3c0;
   font-family: 'JetBrains Mono', monospace;
 }
 
 .stat-label {
   font-size: 9px;
-  color: #999;
+  color: #8899a6;
   text-transform: uppercase;
   margin-top: 4px;
   display: block;
@@ -601,23 +615,26 @@ watch(() => props.systemLogs.length, () => {
 /* Step 03 Button */
 .action-btn {
   width: 100%;
-  background: #000;
-  color: #FFF;
+  background: linear-gradient(135deg, #5b9bd5, #7dd3c0);
+  color: #0a0f1a;
   border: none;
   padding: 14px;
-  border-radius: 4px;
+  border-radius: 12px;
   font-size: 12px;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
-  transition: opacity 0.2s;
+  transition: all 0.3s ease;
+  font-family: 'JetBrains Mono', monospace;
 }
 
 .action-btn:hover:not(:disabled) {
-  opacity: 0.8;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(125, 211, 192, 0.4);
 }
 
 .action-btn:disabled {
-  background: #CCC;
+  background: rgba(255, 255, 255, 0.1);
+  color: #8899a6;
   cursor: not-allowed;
 }
 

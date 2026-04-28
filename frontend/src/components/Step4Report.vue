@@ -58,7 +58,7 @@
                       <path d="M12 2a10 10 0 0 1 10 10" stroke-width="4" stroke="#4B5563" stroke-linecap="round"></path>
                     </svg>
                   </div>
-                  <span class="loading-text">正在生成{{ section.title }}...</span>
+                  <span class="loading-text">Wird generiert: {{ section.title }}...</span>
                 </div>
               </div>
             </div>
@@ -129,7 +129,7 @@
 
           <!-- Next Step Button - 在完成后显示 -->
           <button v-if="isComplete" class="next-step-btn" @click="goToInteraction">
-            <span>进入深度互动</span>
+            <span>Tiefe Interaktion starten</span>
             <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
               <line x1="5" y1="12" x2="19" y2="12"></line>
               <polyline points="12 5 19 12 12 19"></polyline>
@@ -390,1816 +390,2665 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted, onUnmounted, nextTick, h, reactive } from 'vue'
-import { useRouter } from 'vue-router'
-import { getAgentLog, getConsoleLog } from '../api/report'
+import {
+  computed,
+  h,
+  nextTick,
+  onMounted,
+  onUnmounted,
+  reactive,
+  ref,
+  watch,
+} from "vue";
+import { useRouter } from "vue-router";
+import { getAgentLog, getConsoleLog } from "../api/report";
 
-const router = useRouter()
+const router = useRouter();
 
 const props = defineProps({
   reportId: String,
   simulationId: String,
-  systemLogs: Array
-})
+  systemLogs: Array,
+});
 
-const emit = defineEmits(['add-log', 'update-status'])
+const emit = defineEmits(["add-log", "update-status"]);
 
 // Navigation
 const goToInteraction = () => {
   if (props.reportId) {
-    router.push({ name: 'Interaction', params: { reportId: props.reportId } })
+    router.push({ name: "Interaction", params: { reportId: props.reportId } });
   }
-}
+};
 
 // State
-const agentLogs = ref([])
-const consoleLogs = ref([])
-const agentLogLine = ref(0)
-const consoleLogLine = ref(0)
-const reportOutline = ref(null)
-const currentSectionIndex = ref(null)
-const generatedSections = ref({})
-const expandedContent = ref(new Set())
-const expandedLogs = ref(new Set())
-const collapsedSections = ref(new Set())
-const isComplete = ref(false)
-const startTime = ref(null)
-const leftPanel = ref(null)
-const rightPanel = ref(null)
-const logContent = ref(null)
-const showRawResult = reactive({})
+const agentLogs = ref([]);
+const consoleLogs = ref([]);
+const agentLogLine = ref(0);
+const consoleLogLine = ref(0);
+const reportOutline = ref(null);
+const currentSectionIndex = ref(null);
+const generatedSections = ref({});
+const expandedContent = ref(new Set());
+const expandedLogs = ref(new Set());
+const collapsedSections = ref(new Set());
+const isComplete = ref(false);
+const startTime = ref(null);
+const leftPanel = ref(null);
+const rightPanel = ref(null);
+const logContent = ref(null);
+const showRawResult = reactive({});
 
 // Toggle functions
 const toggleRawResult = (timestamp, event) => {
   // 保存按钮相对于视口的位置
-  const button = event?.target
-  const buttonRect = button?.getBoundingClientRect()
-  const buttonTopBeforeToggle = buttonRect?.top
-  
+  const button = event?.target;
+  const buttonRect = button?.getBoundingClientRect();
+  const buttonTopBeforeToggle = buttonRect?.top;
+
   // 切换状态
-  showRawResult[timestamp] = !showRawResult[timestamp]
-  
+  showRawResult[timestamp] = !showRawResult[timestamp];
+
   // 等待 DOM 更新后，调整滚动位置以保持按钮在相同位置
   if (button && buttonTopBeforeToggle !== undefined && rightPanel.value) {
     nextTick(() => {
-      const newButtonRect = button.getBoundingClientRect()
-      const buttonTopAfterToggle = newButtonRect.top
-      const scrollDelta = buttonTopAfterToggle - buttonTopBeforeToggle
-      
+      const newButtonRect = button.getBoundingClientRect();
+      const buttonTopAfterToggle = newButtonRect.top;
+      const scrollDelta = buttonTopAfterToggle - buttonTopBeforeToggle;
+
       // 调整滚动位置
-      rightPanel.value.scrollTop += scrollDelta
-    })
+      rightPanel.value.scrollTop += scrollDelta;
+    });
   }
-}
+};
 
 const toggleSectionContent = (idx) => {
-  if (!generatedSections.value[idx + 1]) return
-  const newSet = new Set(expandedContent.value)
-  if (newSet.has(idx)) {
-    newSet.delete(idx)
-  } else {
-    newSet.add(idx)
+  if (!generatedSections.value[idx + 1]) {
+    return;
   }
-  expandedContent.value = newSet
-}
+  const newSet = new Set(expandedContent.value);
+  if (newSet.has(idx)) {
+    newSet.delete(idx);
+  } else {
+    newSet.add(idx);
+  }
+  expandedContent.value = newSet;
+};
 
 const toggleSectionCollapse = (idx) => {
   // 只有已完成的章节才能折叠
-  if (!generatedSections.value[idx + 1]) return
-  const newSet = new Set(collapsedSections.value)
-  if (newSet.has(idx)) {
-    newSet.delete(idx)
-  } else {
-    newSet.add(idx)
+  if (!generatedSections.value[idx + 1]) {
+    return;
   }
-  collapsedSections.value = newSet
-}
+  const newSet = new Set(collapsedSections.value);
+  if (newSet.has(idx)) {
+    newSet.delete(idx);
+  } else {
+    newSet.add(idx);
+  }
+  collapsedSections.value = newSet;
+};
 
 const toggleLogExpand = (log) => {
-  const newSet = new Set(expandedLogs.value)
+  const newSet = new Set(expandedLogs.value);
   if (newSet.has(log.timestamp)) {
-    newSet.delete(log.timestamp)
+    newSet.delete(log.timestamp);
   } else {
-    newSet.add(log.timestamp)
+    newSet.add(log.timestamp);
   }
-  expandedLogs.value = newSet
-}
+  expandedLogs.value = newSet;
+};
 
 const isLogCollapsed = (log) => {
-  if (['tool_call', 'tool_result', 'llm_response'].includes(log.action)) {
-    return !expandedLogs.value.has(log.timestamp)
+  if (["tool_call", "tool_result", "llm_response"].includes(log.action)) {
+    return !expandedLogs.value.has(log.timestamp);
   }
-  return false
-}
+  return false;
+};
 
 // Tool configurations with display names and colors
 const toolConfig = {
-  'insight_forge': {
-    name: 'Deep Insight',
-    color: 'purple',
-    icon: 'lightbulb' // 灯泡图标 - 代表洞察
+  insight_forge: {
+    name: "Deep Insight",
+    color: "purple",
+    icon: "lightbulb", // 灯泡图标 - 代表洞察
   },
-  'panorama_search': {
-    name: 'Panorama Search',
-    color: 'blue',
-    icon: 'globe' // 地球图标 - 代表全景搜索
+  panorama_search: {
+    name: "Panorama Search",
+    color: "blue",
+    icon: "globe", // 地球图标 - 代表全景搜索
   },
-  'interview_agents': {
-    name: 'Agent Interview',
-    color: 'green',
-    icon: 'users' // 用户图标 - 代表对话
+  interview_agents: {
+    name: "Agent Interview",
+    color: "green",
+    icon: "users", // 用户图标 - 代表对话
   },
-  'quick_search': {
-    name: 'Quick Search',
-    color: 'orange',
-    icon: 'zap' // 闪电图标 - 代表快速
+  quick_search: {
+    name: "Quick Search",
+    color: "orange",
+    icon: "zap", // 闪电图标 - 代表快速
   },
-  'get_graph_statistics': {
-    name: 'Graph Stats',
-    color: 'cyan',
-    icon: 'chart' // 图表图标 - 代表统计
+  get_graph_statistics: {
+    name: "Graph Stats",
+    color: "cyan",
+    icon: "chart", // 图表图标 - 代表统计
   },
-  'get_entities_by_type': {
-    name: 'Entity Query',
-    color: 'pink',
-    icon: 'database' // 数据库图标 - 代表实体
-  }
-}
+  get_entities_by_type: {
+    name: "Entity Query",
+    color: "pink",
+    icon: "database", // 数据库图标 - 代表实体
+  },
+};
 
 const getToolDisplayName = (toolName) => {
-  return toolConfig[toolName]?.name || toolName
-}
+  return toolConfig[toolName]?.name || toolName;
+};
 
 const getToolColor = (toolName) => {
-  return toolConfig[toolName]?.color || 'gray'
-}
+  return toolConfig[toolName]?.color || "gray";
+};
 
 const getToolIcon = (toolName) => {
-  return toolConfig[toolName]?.icon || 'tool'
-}
+  return toolConfig[toolName]?.icon || "tool";
+};
 
 // Parse functions
 const parseInsightForge = (text) => {
   const result = {
-    query: '',
-    simulationRequirement: '',
+    query: "",
+    simulationRequirement: "",
     stats: { facts: 0, entities: 0, relationships: 0 },
     subQueries: [],
     facts: [],
     entities: [],
-    relations: []
-  }
-  
+    relations: [],
+  };
+
   try {
     // 提取分析问题
-    const queryMatch = text.match(/分析问题:\s*(.+?)(?:\n|$)/)
-    if (queryMatch) result.query = queryMatch[1].trim()
-    
+    const queryMatch = text.match(/分析问题:\s*(.+?)(?:\n|$)/);
+    if (queryMatch) {
+      result.query = queryMatch[1].trim();
+    }
+
     // 提取预测场景
-    const reqMatch = text.match(/预测场景:\s*(.+?)(?:\n|$)/)
-    if (reqMatch) result.simulationRequirement = reqMatch[1].trim()
-    
+    const reqMatch = text.match(/预测场景:\s*(.+?)(?:\n|$)/);
+    if (reqMatch) {
+      result.simulationRequirement = reqMatch[1].trim();
+    }
+
     // 提取统计数据 - 匹配"相关预测事实: X条"格式
-    const factMatch = text.match(/相关预测事实:\s*(\d+)/)
-    const entityMatch = text.match(/涉及实体:\s*(\d+)/)
-    const relMatch = text.match(/关系链:\s*(\d+)/)
-    if (factMatch) result.stats.facts = parseInt(factMatch[1])
-    if (entityMatch) result.stats.entities = parseInt(entityMatch[1])
-    if (relMatch) result.stats.relationships = parseInt(relMatch[1])
-    
+    const factMatch = text.match(/相关预测事实:\s*(\d+)/);
+    const entityMatch = text.match(/涉及实体:\s*(\d+)/);
+    const relMatch = text.match(/关系链:\s*(\d+)/);
+    if (factMatch) {
+      result.stats.facts = Number.parseInt(factMatch[1]);
+    }
+    if (entityMatch) {
+      result.stats.entities = Number.parseInt(entityMatch[1]);
+    }
+    if (relMatch) {
+      result.stats.relationships = Number.parseInt(relMatch[1]);
+    }
+
     // 提取子问题 - 完整提取，不限制数量
-    const subQSection = text.match(/### 分析的子问题\n([\s\S]*?)(?=\n###|$)/)
+    const subQSection = text.match(/### 分析的子问题\n([\s\S]*?)(?=\n###|$)/);
     if (subQSection) {
-      const lines = subQSection[1].split('\n').filter(l => l.match(/^\d+\./))
-      result.subQueries = lines.map(l => l.replace(/^\d+\.\s*/, '').trim()).filter(Boolean)
+      const lines = subQSection[1].split("\n").filter((l) => l.match(/^\d+\./));
+      result.subQueries = lines
+        .map((l) => l.replace(/^\d+\.\s*/, "").trim())
+        .filter(Boolean);
     }
-    
+
     // 提取关键事实 - 完整提取，不限制数量
-    const factsSection = text.match(/### 【关键事实】[\s\S]*?\n([\s\S]*?)(?=\n###|$)/)
+    const factsSection = text.match(
+      /### 【关键事实】[\s\S]*?\n([\s\S]*?)(?=\n###|$)/
+    );
     if (factsSection) {
-      const lines = factsSection[1].split('\n').filter(l => l.match(/^\d+\./))
-      result.facts = lines.map(l => {
-        const match = l.match(/^\d+\.\s*"?(.+?)"?\s*$/)
-        return match ? match[1].replace(/^"|"$/g, '').trim() : l.replace(/^\d+\.\s*/, '').trim()
-      }).filter(Boolean)
+      const lines = factsSection[1]
+        .split("\n")
+        .filter((l) => l.match(/^\d+\./));
+      result.facts = lines
+        .map((l) => {
+          const match = l.match(/^\d+\.\s*"?(.+?)"?\s*$/);
+          return match
+            ? match[1].replace(/^"|"$/g, "").trim()
+            : l.replace(/^\d+\.\s*/, "").trim();
+        })
+        .filter(Boolean);
     }
-    
+
     // 提取核心实体 - 完整提取，包含摘要和相关事实数
-    const entitySection = text.match(/### 【核心实体】\n([\s\S]*?)(?=\n###|$)/)
+    const entitySection = text.match(/### 【核心实体】\n([\s\S]*?)(?=\n###|$)/);
     if (entitySection) {
-      const entityText = entitySection[1]
+      const entityText = entitySection[1];
       // 按 "- **" 分割实体块
-      const entityBlocks = entityText.split(/\n(?=- \*\*)/).filter(b => b.trim().startsWith('- **'))
-      result.entities = entityBlocks.map(block => {
-        const nameMatch = block.match(/^-\s*\*\*(.+?)\*\*\s*\((.+?)\)/)
-        const summaryMatch = block.match(/摘要:\s*"?(.+?)"?(?:\n|$)/)
-        const relatedMatch = block.match(/相关事实:\s*(\d+)/)
-        return {
-          name: nameMatch ? nameMatch[1].trim() : '',
-          type: nameMatch ? nameMatch[2].trim() : '',
-          summary: summaryMatch ? summaryMatch[1].trim() : '',
-          relatedFactsCount: relatedMatch ? parseInt(relatedMatch[1]) : 0
-        }
-      }).filter(e => e.name)
+      const entityBlocks = entityText
+        .split(/\n(?=- \*\*)/)
+        .filter((b) => b.trim().startsWith("- **"));
+      result.entities = entityBlocks
+        .map((block) => {
+          const nameMatch = block.match(/^-\s*\*\*(.+?)\*\*\s*\((.+?)\)/);
+          const summaryMatch = block.match(/摘要:\s*"?(.+?)"?(?:\n|$)/);
+          const relatedMatch = block.match(/相关事实:\s*(\d+)/);
+          return {
+            name: nameMatch ? nameMatch[1].trim() : "",
+            type: nameMatch ? nameMatch[2].trim() : "",
+            summary: summaryMatch ? summaryMatch[1].trim() : "",
+            relatedFactsCount: relatedMatch
+              ? Number.parseInt(relatedMatch[1])
+              : 0,
+          };
+        })
+        .filter((e) => e.name);
     }
-    
+
     // 提取关系链 - 完整提取，不限制数量
-    const relSection = text.match(/### 【关系链】\n([\s\S]*?)(?=\n###|$)/)
+    const relSection = text.match(/### 【关系链】\n([\s\S]*?)(?=\n###|$)/);
     if (relSection) {
-      const lines = relSection[1].split('\n').filter(l => l.trim().startsWith('-'))
-      result.relations = lines.map(l => {
-        const match = l.match(/^-\s*(.+?)\s*--\[(.+?)\]-->\s*(.+)$/)
-        if (match) {
-          return { source: match[1].trim(), relation: match[2].trim(), target: match[3].trim() }
-        }
-        return null
-      }).filter(Boolean)
+      const lines = relSection[1]
+        .split("\n")
+        .filter((l) => l.trim().startsWith("-"));
+      result.relations = lines
+        .map((l) => {
+          const match = l.match(/^-\s*(.+?)\s*--\[(.+?)\]-->\s*(.+)$/);
+          if (match) {
+            return {
+              source: match[1].trim(),
+              relation: match[2].trim(),
+              target: match[3].trim(),
+            };
+          }
+          return null;
+        })
+        .filter(Boolean);
     }
   } catch (e) {
-    console.warn('Parse insight_forge failed:', e)
+    console.warn("Parse insight_forge failed:", e);
   }
-  
-  return result
-}
+
+  return result;
+};
 
 const parsePanorama = (text) => {
   const result = {
-    query: '',
+    query: "",
     stats: { nodes: 0, edges: 0, activeFacts: 0, historicalFacts: 0 },
     activeFacts: [],
     historicalFacts: [],
-    entities: []
-  }
-  
+    entities: [],
+  };
+
   try {
     // 提取查询
-    const queryMatch = text.match(/查询:\s*(.+?)(?:\n|$)/)
-    if (queryMatch) result.query = queryMatch[1].trim()
-    
+    const queryMatch = text.match(/查询:\s*(.+?)(?:\n|$)/);
+    if (queryMatch) {
+      result.query = queryMatch[1].trim();
+    }
+
     // 提取统计数据
-    const nodesMatch = text.match(/总节点数:\s*(\d+)/)
-    const edgesMatch = text.match(/总边数:\s*(\d+)/)
-    const activeMatch = text.match(/当前有效事实:\s*(\d+)/)
-    const histMatch = text.match(/历史\/过期事实:\s*(\d+)/)
-    if (nodesMatch) result.stats.nodes = parseInt(nodesMatch[1])
-    if (edgesMatch) result.stats.edges = parseInt(edgesMatch[1])
-    if (activeMatch) result.stats.activeFacts = parseInt(activeMatch[1])
-    if (histMatch) result.stats.historicalFacts = parseInt(histMatch[1])
-    
+    const nodesMatch = text.match(/总节点数:\s*(\d+)/);
+    const edgesMatch = text.match(/总边数:\s*(\d+)/);
+    const activeMatch = text.match(/当前有效事实:\s*(\d+)/);
+    const histMatch = text.match(/历史\/过期事实:\s*(\d+)/);
+    if (nodesMatch) {
+      result.stats.nodes = Number.parseInt(nodesMatch[1]);
+    }
+    if (edgesMatch) {
+      result.stats.edges = Number.parseInt(edgesMatch[1]);
+    }
+    if (activeMatch) {
+      result.stats.activeFacts = Number.parseInt(activeMatch[1]);
+    }
+    if (histMatch) {
+      result.stats.historicalFacts = Number.parseInt(histMatch[1]);
+    }
+
     // 提取当前有效事实 - 完整提取，不限制数量
-    const activeSection = text.match(/### 【当前有效事实】[\s\S]*?\n([\s\S]*?)(?=\n###|$)/)
+    const activeSection = text.match(
+      /### 【当前有效事实】[\s\S]*?\n([\s\S]*?)(?=\n###|$)/
+    );
     if (activeSection) {
-      const lines = activeSection[1].split('\n').filter(l => l.match(/^\d+\./))
-      result.activeFacts = lines.map(l => {
-        // 移除编号和引号
-        const factText = l.replace(/^\d+\.\s*/, '').replace(/^"|"$/g, '').trim()
-        return factText
-      }).filter(Boolean)
+      const lines = activeSection[1]
+        .split("\n")
+        .filter((l) => l.match(/^\d+\./));
+      result.activeFacts = lines
+        .map((l) => {
+          // 移除编号和引号
+          const factText = l
+            .replace(/^\d+\.\s*/, "")
+            .replace(/^"|"$/g, "")
+            .trim();
+          return factText;
+        })
+        .filter(Boolean);
     }
-    
+
     // 提取历史/过期事实 - 完整提取，不限制数量
-    const histSection = text.match(/### 【历史\/过期事实】[\s\S]*?\n([\s\S]*?)(?=\n###|$)/)
+    const histSection = text.match(
+      /### 【历史\/过期事实】[\s\S]*?\n([\s\S]*?)(?=\n###|$)/
+    );
     if (histSection) {
-      const lines = histSection[1].split('\n').filter(l => l.match(/^\d+\./))
-      result.historicalFacts = lines.map(l => {
-        const factText = l.replace(/^\d+\.\s*/, '').replace(/^"|"$/g, '').trim()
-        return factText
-      }).filter(Boolean)
+      const lines = histSection[1].split("\n").filter((l) => l.match(/^\d+\./));
+      result.historicalFacts = lines
+        .map((l) => {
+          const factText = l
+            .replace(/^\d+\.\s*/, "")
+            .replace(/^"|"$/g, "")
+            .trim();
+          return factText;
+        })
+        .filter(Boolean);
     }
-    
+
     // 提取涉及实体 - 完整提取，不限制数量
-    const entitySection = text.match(/### 【涉及实体】\n([\s\S]*?)(?=\n###|$)/)
+    const entitySection = text.match(/### 【涉及实体】\n([\s\S]*?)(?=\n###|$)/);
     if (entitySection) {
-      const lines = entitySection[1].split('\n').filter(l => l.trim().startsWith('-'))
-      result.entities = lines.map(l => {
-        const match = l.match(/^-\s*\*\*(.+?)\*\*\s*\((.+?)\)/)
-        if (match) return { name: match[1].trim(), type: match[2].trim() }
-        return null
-      }).filter(Boolean)
+      const lines = entitySection[1]
+        .split("\n")
+        .filter((l) => l.trim().startsWith("-"));
+      result.entities = lines
+        .map((l) => {
+          const match = l.match(/^-\s*\*\*(.+?)\*\*\s*\((.+?)\)/);
+          if (match) {
+            return { name: match[1].trim(), type: match[2].trim() };
+          }
+          return null;
+        })
+        .filter(Boolean);
     }
   } catch (e) {
-    console.warn('Parse panorama failed:', e)
+    console.warn("Parse panorama failed:", e);
   }
-  
-  return result
-}
+
+  return result;
+};
 
 const parseInterview = (text) => {
   const result = {
-    topic: '',
-    agentCount: '',
+    topic: "",
+    agentCount: "",
     successCount: 0,
     totalCount: 0,
-    selectionReason: '',
+    selectionReason: "",
     interviews: [],
-    summary: ''
-  }
-  
+    summary: "",
+  };
+
   try {
     // 提取采访主题
-    const topicMatch = text.match(/\*\*采访主题:\*\*\s*(.+?)(?:\n|$)/)
-    if (topicMatch) result.topic = topicMatch[1].trim()
-    
+    const topicMatch = text.match(/\*\*采访主题:\*\*\s*(.+?)(?:\n|$)/);
+    if (topicMatch) {
+      result.topic = topicMatch[1].trim();
+    }
+
     // 提取采访人数（如 "5 / 9 位模拟Agent"）
-    const countMatch = text.match(/\*\*采访人数:\*\*\s*(\d+)\s*\/\s*(\d+)/)
+    const countMatch = text.match(/\*\*采访人数:\*\*\s*(\d+)\s*\/\s*(\d+)/);
     if (countMatch) {
-      result.successCount = parseInt(countMatch[1])
-      result.totalCount = parseInt(countMatch[2])
-      result.agentCount = `${countMatch[1]} / ${countMatch[2]}`
+      result.successCount = Number.parseInt(countMatch[1]);
+      result.totalCount = Number.parseInt(countMatch[2]);
+      result.agentCount = `${countMatch[1]} / ${countMatch[2]}`;
     }
-    
+
     // 提取采访对象选择理由
-    const reasonMatch = text.match(/### 采访对象选择理由\n([\s\S]*?)(?=\n---\n|\n### 采访实录)/)
+    const reasonMatch = text.match(
+      /### 采访对象选择理由\n([\s\S]*?)(?=\n---\n|\n### 采访实录)/
+    );
     if (reasonMatch) {
-      result.selectionReason = reasonMatch[1].trim()
+      result.selectionReason = reasonMatch[1].trim();
     }
-    
+
     // 解析每个人的选择理由
     const parseIndividualReasons = (reasonText) => {
-      const reasons = {}
-      if (!reasonText) return reasons
-      
-      const lines = reasonText.split(/\n+/)
-      let currentName = null
-      let currentReason = []
-      
+      const reasons = {};
+      if (!reasonText) {
+        return reasons;
+      }
+
+      const lines = reasonText.split(/\n+/);
+      let currentName = null;
+      let currentReason = [];
+
       for (const line of lines) {
-        let headerMatch = null
-        let name = null
-        let reasonStart = null
-        
+        let headerMatch = null;
+        let name = null;
+        let reasonStart = null;
+
         // 格式1: 数字. **名字（index=X）**：理由
         // 例如: 1. **校友_345（index=1）**：作为武大校友...
-        headerMatch = line.match(/^\d+\.\s*\*\*([^*（(]+)(?:[（(]index\s*=?\s*\d+[)）])?\*\*[：:]\s*(.*)/)
+        headerMatch = line.match(
+          /^\d+\.\s*\*\*([^*（(]+)(?:[（(]index\s*=?\s*\d+[)）])?\*\*[：:]\s*(.*)/
+        );
         if (headerMatch) {
-          name = headerMatch[1].trim()
-          reasonStart = headerMatch[2]
+          name = headerMatch[1].trim();
+          reasonStart = headerMatch[2];
         }
-        
+
         // 格式2: - 选择名字（index X）：理由
         // 例如: - 选择家长_601（index 0）：作为家长群体代表...
         if (!headerMatch) {
-          headerMatch = line.match(/^-\s*选择([^（(]+)(?:[（(]index\s*=?\s*\d+[)）])?[：:]\s*(.*)/)
+          headerMatch = line.match(
+            /^-\s*选择([^（(]+)(?:[（(]index\s*=?\s*\d+[)）])?[：:]\s*(.*)/
+          );
           if (headerMatch) {
-            name = headerMatch[1].trim()
-            reasonStart = headerMatch[2]
+            name = headerMatch[1].trim();
+            reasonStart = headerMatch[2];
           }
         }
-        
+
         // 格式3: - **名字（index X）**：理由
         // 例如: - **家长_601（index 0）**：作为家长群体代表...
         if (!headerMatch) {
-          headerMatch = line.match(/^-\s*\*\*([^*（(]+)(?:[（(]index\s*=?\s*\d+[)）])?\*\*[：:]\s*(.*)/)
+          headerMatch = line.match(
+            /^-\s*\*\*([^*（(]+)(?:[（(]index\s*=?\s*\d+[)）])?\*\*[：:]\s*(.*)/
+          );
           if (headerMatch) {
-            name = headerMatch[1].trim()
-            reasonStart = headerMatch[2]
+            name = headerMatch[1].trim();
+            reasonStart = headerMatch[2];
           }
         }
-        
+
         if (name) {
           // 保存上一个人的理由
           if (currentName && currentReason.length > 0) {
-            reasons[currentName] = currentReason.join(' ').trim()
+            reasons[currentName] = currentReason.join(" ").trim();
           }
           // 开始新的人
-          currentName = name
-          currentReason = reasonStart ? [reasonStart.trim()] : []
-        } else if (currentName && line.trim() && !line.match(/^未选|^综上|^最终选择/)) {
+          currentName = name;
+          currentReason = reasonStart ? [reasonStart.trim()] : [];
+        } else if (
+          currentName &&
+          line.trim() &&
+          !line.match(/^未选|^综上|^最终选择/)
+        ) {
           // 理由的续行（排除结尾总结段落）
-          currentReason.push(line.trim())
+          currentReason.push(line.trim());
         }
       }
-      
+
       // 保存最后一个人的理由
       if (currentName && currentReason.length > 0) {
-        reasons[currentName] = currentReason.join(' ').trim()
+        reasons[currentName] = currentReason.join(" ").trim();
       }
-      
-      return reasons
-    }
-    
-    const individualReasons = parseIndividualReasons(result.selectionReason)
-    
+
+      return reasons;
+    };
+
+    const individualReasons = parseIndividualReasons(result.selectionReason);
+
     // 提取每个采访记录
-    const interviewBlocks = text.split(/#### 采访 #\d+:/).slice(1)
-    
+    const interviewBlocks = text.split(/#### 采访 #\d+:/).slice(1);
+
     interviewBlocks.forEach((block, index) => {
       const interview = {
         num: index + 1,
-        title: '',
-        name: '',
-        role: '',
-        bio: '',
-        selectionReason: '',
+        title: "",
+        name: "",
+        role: "",
+        bio: "",
+        selectionReason: "",
         questions: [],
-        twitterAnswer: '',
-        redditAnswer: '',
-        quotes: []
-      }
-      
+        twitterAnswer: "",
+        redditAnswer: "",
+        quotes: [],
+      };
+
       // 提取标题（如 "学生"、"教育从业者" 等）
-      const titleMatch = block.match(/^(.+?)\n/)
-      if (titleMatch) interview.title = titleMatch[1].trim()
-      
+      const titleMatch = block.match(/^(.+?)\n/);
+      if (titleMatch) {
+        interview.title = titleMatch[1].trim();
+      }
+
       // 提取姓名和角色
-      const nameRoleMatch = block.match(/\*\*(.+?)\*\*\s*\((.+?)\)/)
+      const nameRoleMatch = block.match(/\*\*(.+?)\*\*\s*\((.+?)\)/);
       if (nameRoleMatch) {
-        interview.name = nameRoleMatch[1].trim()
-        interview.role = nameRoleMatch[2].trim()
+        interview.name = nameRoleMatch[1].trim();
+        interview.role = nameRoleMatch[2].trim();
         // 设置该人的选择理由
-        interview.selectionReason = individualReasons[interview.name] || ''
+        interview.selectionReason = individualReasons[interview.name] || "";
       }
-      
+
       // 提取简介
-      const bioMatch = block.match(/_简介:\s*([\s\S]*?)_\n/)
+      const bioMatch = block.match(/_简介:\s*([\s\S]*?)_\n/);
       if (bioMatch) {
-        interview.bio = bioMatch[1].trim().replace(/\.\.\.$/, '...')
+        interview.bio = bioMatch[1].trim().replace(/\.\.\.$/, "...");
       }
-      
+
       // 提取问题列表
-      const qMatch = block.match(/\*\*Q:\*\*\s*([\s\S]*?)(?=\n\n\*\*A:\*\*|\*\*A:\*\*)/)
+      const qMatch = block.match(
+        /\*\*Q:\*\*\s*([\s\S]*?)(?=\n\n\*\*A:\*\*|\*\*A:\*\*)/
+      );
       if (qMatch) {
-        const qText = qMatch[1].trim()
+        const qText = qMatch[1].trim();
         // 按数字编号分割问题
-        const questions = qText.split(/\n\d+\.\s+/).filter(q => q.trim())
+        const questions = qText.split(/\n\d+\.\s+/).filter((q) => q.trim());
         if (questions.length > 0) {
           // 如果第一个问题前面有"1."，需要特殊处理
-          const firstQ = qText.match(/^1\.\s+(.+)/)
+          const firstQ = qText.match(/^1\.\s+(.+)/);
           if (firstQ) {
-            interview.questions = [firstQ[1].trim(), ...questions.slice(1).map(q => q.trim())]
+            interview.questions = [
+              firstQ[1].trim(),
+              ...questions.slice(1).map((q) => q.trim()),
+            ];
           } else {
-            interview.questions = questions.map(q => q.trim())
+            interview.questions = questions.map((q) => q.trim());
           }
         }
       }
-      
+
       // 提取回答 - 分Twitter和Reddit
-      const answerMatch = block.match(/\*\*A:\*\*\s*([\s\S]*?)(?=\*\*关键引言|$)/)
+      const answerMatch = block.match(
+        /\*\*A:\*\*\s*([\s\S]*?)(?=\*\*关键引言|$)/
+      );
       if (answerMatch) {
-        const answerText = answerMatch[1].trim()
-        
+        const answerText = answerMatch[1].trim();
+
         // 分离Twitter和Reddit回答
-        const twitterMatch = answerText.match(/【Twitter平台回答】\n?([\s\S]*?)(?=【Reddit平台回答】|$)/)
-        const redditMatch = answerText.match(/【Reddit平台回答】\n?([\s\S]*?)$/)
-        
+        const twitterMatch = answerText.match(
+          /【Twitter平台回答】\n?([\s\S]*?)(?=【Reddit平台回答】|$)/
+        );
+        const redditMatch = answerText.match(
+          /【Reddit平台回答】\n?([\s\S]*?)$/
+        );
+
         if (twitterMatch) {
-          interview.twitterAnswer = twitterMatch[1].trim()
+          interview.twitterAnswer = twitterMatch[1].trim();
         }
         if (redditMatch) {
-          interview.redditAnswer = redditMatch[1].trim()
+          interview.redditAnswer = redditMatch[1].trim();
         }
-        
+
         // 平台回退逻辑（兼容旧格式：只有一个平台标记的情况）
         if (!twitterMatch && redditMatch) {
           // 只有 Reddit 回答，仅在非占位文本时复制为默认显示
-          if (interview.redditAnswer && interview.redditAnswer !== '（该平台未获得回复）') {
-            interview.twitterAnswer = interview.redditAnswer
+          if (
+            interview.redditAnswer &&
+            interview.redditAnswer !== "（该平台未获得回复）"
+          ) {
+            interview.twitterAnswer = interview.redditAnswer;
           }
         } else if (twitterMatch && !redditMatch) {
-          if (interview.twitterAnswer && interview.twitterAnswer !== '（该平台未获得回复）') {
-            interview.redditAnswer = interview.twitterAnswer
+          if (
+            interview.twitterAnswer &&
+            interview.twitterAnswer !== "（该平台未获得回复）"
+          ) {
+            interview.redditAnswer = interview.twitterAnswer;
           }
-        } else if (!twitterMatch && !redditMatch) {
+        } else if (!(twitterMatch || redditMatch)) {
           // 没有分平台标记（极旧格式），整体作为回答
-          interview.twitterAnswer = answerText
+          interview.twitterAnswer = answerText;
         }
       }
-      
+
       // 提取关键引言（兼容多种引号格式）
-      const quotesMatch = block.match(/\*\*关键引言:\*\*\n([\s\S]*?)(?=\n---|\n####|$)/)
+      const quotesMatch = block.match(
+        /\*\*关键引言:\*\*\n([\s\S]*?)(?=\n---|\n####|$)/
+      );
       if (quotesMatch) {
-        const quotesText = quotesMatch[1]
+        const quotesText = quotesMatch[1];
         // 优先匹配 > "text" 格式
-        let quoteMatches = quotesText.match(/> "([^"]+)"/g)
+        let quoteMatches = quotesText.match(/> "([^"]+)"/g);
         // 回退：匹配 > "text" 或 > \u201Ctext\u201D（中文引号）
         if (!quoteMatches) {
-          quoteMatches = quotesText.match(/> [\u201C""]([^\u201D""]+)[\u201D""]/g)
+          quoteMatches = quotesText.match(
+            /> [\u201C""]([^\u201D""]+)[\u201D""]/g
+          );
         }
         if (quoteMatches) {
           interview.quotes = quoteMatches
-            .map(q => q.replace(/^> [\u201C""]|[\u201D""]$/g, '').trim())
-            .filter(q => q)
+            .map((q) => q.replace(/^> [\u201C""]|[\u201D""]$/g, "").trim())
+            .filter((q) => q);
         }
       }
-      
+
       if (interview.name || interview.title) {
-        result.interviews.push(interview)
+        result.interviews.push(interview);
       }
-    })
-    
+    });
+
     // 提取采访摘要
-    const summaryMatch = text.match(/### 采访摘要与核心观点\n([\s\S]*?)$/)
+    const summaryMatch = text.match(/### 采访摘要与核心观点\n([\s\S]*?)$/);
     if (summaryMatch) {
-      result.summary = summaryMatch[1].trim()
+      result.summary = summaryMatch[1].trim();
     }
   } catch (e) {
-    console.warn('Parse interview failed:', e)
+    console.warn("Parse interview failed:", e);
   }
-  
-  return result
-}
+
+  return result;
+};
 
 const parseQuickSearch = (text) => {
   const result = {
-    query: '',
+    query: "",
     count: 0,
     facts: [],
     edges: [],
-    nodes: []
-  }
-  
+    nodes: [],
+  };
+
   try {
     // 提取搜索查询
-    const queryMatch = text.match(/搜索查询:\s*(.+?)(?:\n|$)/)
-    if (queryMatch) result.query = queryMatch[1].trim()
-    
+    const queryMatch = text.match(/搜索查询:\s*(.+?)(?:\n|$)/);
+    if (queryMatch) {
+      result.query = queryMatch[1].trim();
+    }
+
     // 提取结果数量
-    const countMatch = text.match(/找到\s*(\d+)\s*条/)
-    if (countMatch) result.count = parseInt(countMatch[1])
-    
+    const countMatch = text.match(/找到\s*(\d+)\s*条/);
+    if (countMatch) {
+      result.count = Number.parseInt(countMatch[1]);
+    }
+
     // 提取相关事实 - 完整提取，不限制数量
-    const factsSection = text.match(/### 相关事实:\n([\s\S]*)$/)
+    const factsSection = text.match(/### 相关事实:\n([\s\S]*)$/);
     if (factsSection) {
-      const lines = factsSection[1].split('\n').filter(l => l.match(/^\d+\./))
-      result.facts = lines.map(l => l.replace(/^\d+\.\s*/, '').trim()).filter(Boolean)
+      const lines = factsSection[1]
+        .split("\n")
+        .filter((l) => l.match(/^\d+\./));
+      result.facts = lines
+        .map((l) => l.replace(/^\d+\.\s*/, "").trim())
+        .filter(Boolean);
     }
-    
+
     // 尝试提取边信息（如果有）
-    const edgesSection = text.match(/### 相关边:\n([\s\S]*?)(?=\n###|$)/)
+    const edgesSection = text.match(/### 相关边:\n([\s\S]*?)(?=\n###|$)/);
     if (edgesSection) {
-      const lines = edgesSection[1].split('\n').filter(l => l.trim().startsWith('-'))
-      result.edges = lines.map(l => {
-        const match = l.match(/^-\s*(.+?)\s*--\[(.+?)\]-->\s*(.+)$/)
-        if (match) {
-          return { source: match[1].trim(), relation: match[2].trim(), target: match[3].trim() }
-        }
-        return null
-      }).filter(Boolean)
+      const lines = edgesSection[1]
+        .split("\n")
+        .filter((l) => l.trim().startsWith("-"));
+      result.edges = lines
+        .map((l) => {
+          const match = l.match(/^-\s*(.+?)\s*--\[(.+?)\]-->\s*(.+)$/);
+          if (match) {
+            return {
+              source: match[1].trim(),
+              relation: match[2].trim(),
+              target: match[3].trim(),
+            };
+          }
+          return null;
+        })
+        .filter(Boolean);
     }
-    
+
     // 尝试提取节点信息（如果有）
-    const nodesSection = text.match(/### 相关节点:\n([\s\S]*?)(?=\n###|$)/)
+    const nodesSection = text.match(/### 相关节点:\n([\s\S]*?)(?=\n###|$)/);
     if (nodesSection) {
-      const lines = nodesSection[1].split('\n').filter(l => l.trim().startsWith('-'))
-      result.nodes = lines.map(l => {
-        const match = l.match(/^-\s*\*\*(.+?)\*\*\s*\((.+?)\)/)
-        if (match) return { name: match[1].trim(), type: match[2].trim() }
-        const simpleMatch = l.match(/^-\s*(.+)$/)
-        if (simpleMatch) return { name: simpleMatch[1].trim(), type: '' }
-        return null
-      }).filter(Boolean)
+      const lines = nodesSection[1]
+        .split("\n")
+        .filter((l) => l.trim().startsWith("-"));
+      result.nodes = lines
+        .map((l) => {
+          const match = l.match(/^-\s*\*\*(.+?)\*\*\s*\((.+?)\)/);
+          if (match) {
+            return { name: match[1].trim(), type: match[2].trim() };
+          }
+          const simpleMatch = l.match(/^-\s*(.+)$/);
+          if (simpleMatch) {
+            return { name: simpleMatch[1].trim(), type: "" };
+          }
+          return null;
+        })
+        .filter(Boolean);
     }
   } catch (e) {
-    console.warn('Parse quick_search failed:', e)
+    console.warn("Parse quick_search failed:", e);
   }
-  
-  return result
-}
+
+  return result;
+};
 
 // ========== Sub Components ==========
 
 // Insight Display Component - Enhanced with full data rendering (Interview-like style)
 const InsightDisplay = {
-  props: ['result', 'resultLength'],
+  props: ["result", "resultLength"],
   setup(props) {
-    const activeTab = ref('facts') // 'facts', 'entities', 'relations', 'subqueries'
-    const expandedFacts = ref(false)
-    const expandedEntities = ref(false)
-    const expandedRelations = ref(false)
-    const INITIAL_SHOW_COUNT = 5
-    
+    const activeTab = ref("facts"); // 'facts', 'entities', 'relations', 'subqueries'
+    const expandedFacts = ref(false);
+    const expandedEntities = ref(false);
+    const expandedRelations = ref(false);
+    const INITIAL_SHOW_COUNT = 5;
+
     // Format result size for display
     const formatSize = (length) => {
-      if (!length) return ''
-      if (length >= 1000) {
-        return `${(length / 1000).toFixed(1)}k chars`
+      if (!length) {
+        return "";
       }
-      return `${length} chars`
-    }
-    
-    return () => h('div', { class: 'insight-display' }, [
-      // Header Section - like interview header
-      h('div', { class: 'insight-header' }, [
-        h('div', { class: 'header-main' }, [
-          h('div', { class: 'header-title' }, 'Deep Insight'),
-          h('div', { class: 'header-stats' }, [
-            h('span', { class: 'stat-item' }, [
-              h('span', { class: 'stat-value' }, props.result.stats.facts || props.result.facts.length),
-              h('span', { class: 'stat-label' }, 'Facts')
+      if (length >= 1000) {
+        return `${(length / 1000).toFixed(1)}k chars`;
+      }
+      return `${length} chars`;
+    };
+
+    return () =>
+      h("div", { class: "insight-display" }, [
+        // Header Section - like interview header
+        h("div", { class: "insight-header" }, [
+          h("div", { class: "header-main" }, [
+            h("div", { class: "header-title" }, "Deep Insight"),
+            h("div", { class: "header-stats" }, [
+              h("span", { class: "stat-item" }, [
+                h(
+                  "span",
+                  { class: "stat-value" },
+                  props.result.stats.facts || props.result.facts.length
+                ),
+                h("span", { class: "stat-label" }, "Facts"),
+              ]),
+              h("span", { class: "stat-divider" }, "/"),
+              h("span", { class: "stat-item" }, [
+                h(
+                  "span",
+                  { class: "stat-value" },
+                  props.result.stats.entities || props.result.entities.length
+                ),
+                h("span", { class: "stat-label" }, "Entities"),
+              ]),
+              h("span", { class: "stat-divider" }, "/"),
+              h("span", { class: "stat-item" }, [
+                h(
+                  "span",
+                  { class: "stat-value" },
+                  props.result.stats.relationships ||
+                    props.result.relations.length
+                ),
+                h("span", { class: "stat-label" }, "Relations"),
+              ]),
+              props.resultLength && h("span", { class: "stat-divider" }, "·"),
+              props.resultLength &&
+                h(
+                  "span",
+                  { class: "stat-size" },
+                  formatSize(props.resultLength)
+                ),
             ]),
-            h('span', { class: 'stat-divider' }, '/'),
-            h('span', { class: 'stat-item' }, [
-              h('span', { class: 'stat-value' }, props.result.stats.entities || props.result.entities.length),
-              h('span', { class: 'stat-label' }, 'Entities')
+          ]),
+          props.result.query &&
+            h("div", { class: "header-topic" }, props.result.query),
+          props.result.simulationRequirement &&
+            h("div", { class: "header-scenario" }, [
+              h("span", { class: "scenario-label" }, "Vorhersageszenario: "),
+              h(
+                "span",
+                { class: "scenario-text" },
+                props.result.simulationRequirement
+              ),
             ]),
-            h('span', { class: 'stat-divider' }, '/'),
-            h('span', { class: 'stat-item' }, [
-              h('span', { class: 'stat-value' }, props.result.stats.relationships || props.result.relations.length),
-              h('span', { class: 'stat-label' }, 'Relations')
+        ]),
+
+        // Tab Navigation
+        h("div", { class: "insight-tabs" }, [
+          h(
+            "button",
+            {
+              class: ["insight-tab", { active: activeTab.value === "facts" }],
+              onClick: () => {
+                activeTab.value = "facts";
+              },
+            },
+            [
+              h(
+                "span",
+                { class: "tab-label" },
+                `Aktuelle Schlüsselerinnerungen (${props.result.facts.length})`
+              ),
+            ]
+          ),
+          h(
+            "button",
+            {
+              class: [
+                "insight-tab",
+                { active: activeTab.value === "entities" },
+              ],
+              onClick: () => {
+                activeTab.value = "entities";
+              },
+            },
+            [
+              h(
+                "span",
+                { class: "tab-label" },
+                `Kernentitäten (${props.result.entities.length})`
+              ),
+            ]
+          ),
+          h(
+            "button",
+            {
+              class: [
+                "insight-tab",
+                { active: activeTab.value === "relations" },
+              ],
+              onClick: () => {
+                activeTab.value = "relations";
+              },
+            },
+            [
+              h(
+                "span",
+                { class: "tab-label" },
+                `Beziehungsketten (${props.result.relations.length})`
+              ),
+            ]
+          ),
+          props.result.subQueries.length > 0 &&
+            h(
+              "button",
+              {
+                class: [
+                  "insight-tab",
+                  { active: activeTab.value === "subqueries" },
+                ],
+                onClick: () => {
+                  activeTab.value = "subqueries";
+                },
+              },
+              [
+                h(
+                  "span",
+                  { class: "tab-label" },
+                  `Teilfragen (${props.result.subQueries.length})`
+                ),
+              ]
+            ),
+        ]),
+
+        // Tab Content
+        h("div", { class: "insight-content" }, [
+          // Facts Tab
+          activeTab.value === "facts" &&
+            props.result.facts.length > 0 &&
+            h("div", { class: "facts-panel" }, [
+              h("div", { class: "panel-header" }, [
+                h(
+                  "span",
+                  { class: "panel-title" },
+                  "Neueste Schlüsselerkenntnisse aus dem zeitlichen Gedächtnis"
+                ),
+                h(
+                  "span",
+                  { class: "panel-count" },
+                  `共 ${props.result.facts.length} 条`
+                ),
+              ]),
+              h(
+                "div",
+                { class: "facts-list" },
+                (expandedFacts.value
+                  ? props.result.facts
+                  : props.result.facts.slice(0, INITIAL_SHOW_COUNT)
+                ).map((fact, i) =>
+                  h("div", { class: "fact-item", key: i }, [
+                    h("span", { class: "fact-number" }, i + 1),
+                    h("div", { class: "fact-content" }, fact),
+                  ])
+                )
+              ),
+              props.result.facts.length > INITIAL_SHOW_COUNT &&
+                h(
+                  "button",
+                  {
+                    class: "expand-btn",
+                    onClick: () => {
+                      expandedFacts.value = !expandedFacts.value;
+                    },
+                  },
+                  expandedFacts.value
+                    ? "Einklappen ▲"
+                    : `展开全部 ${props.result.facts.length} 条 ▼`
+                ),
             ]),
-            props.resultLength && h('span', { class: 'stat-divider' }, '·'),
-            props.resultLength && h('span', { class: 'stat-size' }, formatSize(props.resultLength))
-          ])
+
+          // Entities Tab
+          activeTab.value === "entities" &&
+            props.result.entities.length > 0 &&
+            h("div", { class: "entities-panel" }, [
+              h("div", { class: "panel-header" }, [
+                h("span", { class: "panel-title" }, "Kernentitäten"),
+                h(
+                  "span",
+                  { class: "panel-count" },
+                  `共 ${props.result.entities.length} 个`
+                ),
+              ]),
+              h(
+                "div",
+                { class: "entities-grid" },
+                (expandedEntities.value
+                  ? props.result.entities
+                  : props.result.entities.slice(0, 12)
+                ).map((entity, i) =>
+                  h(
+                    "div",
+                    {
+                      class: "entity-tag",
+                      key: i,
+                      title: entity.summary || "",
+                    },
+                    [
+                      h("span", { class: "entity-name" }, entity.name),
+                      h("span", { class: "entity-type" }, entity.type),
+                      entity.relatedFactsCount > 0 &&
+                        h(
+                          "span",
+                          { class: "entity-fact-count" },
+                          `${entity.relatedFactsCount} Fakten`
+                        ),
+                    ]
+                  )
+                )
+              ),
+              props.result.entities.length > 12 &&
+                h(
+                  "button",
+                  {
+                    class: "expand-btn",
+                    onClick: () => {
+                      expandedEntities.value = !expandedEntities.value;
+                    },
+                  },
+                  expandedEntities.value
+                    ? "收起 ▲"
+                    : `展开全部 ${props.result.entities.length} 个 ▼`
+                ),
+            ]),
+
+          // Relations Tab
+          activeTab.value === "relations" &&
+            props.result.relations.length > 0 &&
+            h("div", { class: "relations-panel" }, [
+              h("div", { class: "panel-header" }, [
+                h("span", { class: "panel-title" }, "Beziehungsketten"),
+                h(
+                  "span",
+                  { class: "panel-count" },
+                  `Gesamt: ${props.result.relations.length}`
+                ),
+              ]),
+              h(
+                "div",
+                { class: "relations-list" },
+                (expandedRelations.value
+                  ? props.result.relations
+                  : props.result.relations.slice(0, INITIAL_SHOW_COUNT)
+                ).map((rel, i) =>
+                  h("div", { class: "relation-item", key: i }, [
+                    h("span", { class: "rel-source" }, rel.source),
+                    h("span", { class: "rel-arrow" }, [
+                      h("span", { class: "rel-line" }),
+                      h("span", { class: "rel-label" }, rel.relation),
+                      h("span", { class: "rel-line" }),
+                    ]),
+                    h("span", { class: "rel-target" }, rel.target),
+                  ])
+                )
+              ),
+              props.result.relations.length > INITIAL_SHOW_COUNT &&
+                h(
+                  "button",
+                  {
+                    class: "expand-btn",
+                    onClick: () => {
+                      expandedRelations.value = !expandedRelations.value;
+                    },
+                  },
+                  expandedRelations.value
+                    ? "Einklappen ▲"
+                    : "Alle {{ props.result.relations.length }} anzeigen ▼"
+                ),
+            ]),
+
+          // Sub-queries Tab
+          activeTab.value === "subqueries" &&
+            props.result.subQueries.length > 0 &&
+            h("div", { class: "subqueries-panel" }, [
+              h("div", { class: "panel-header" }, [
+                h(
+                  "span",
+                  { class: "panel-title" },
+                  "Drift-Abfrage generiert Analyse-Teilfragen"
+                ),
+                h(
+                  "span",
+                  { class: "panel-count" },
+                  `Gesamt: ${props.result.subQueries.length}`
+                ),
+              ]),
+              h(
+                "div",
+                { class: "subqueries-list" },
+                props.result.subQueries.map((sq, i) =>
+                  h("div", { class: "subquery-item", key: i }, [
+                    h("span", { class: "subquery-number" }, `Q${i + 1}`),
+                    h("div", { class: "subquery-text" }, sq),
+                  ])
+                )
+              ),
+            ]),
+
+          // Empty state
+          activeTab.value === "facts" &&
+            props.result.facts.length === 0 &&
+            h(
+              "div",
+              { class: "empty-state" },
+              "Keine aktuellen Schlüsselerinnerungen"
+            ),
+          activeTab.value === "entities" &&
+            props.result.entities.length === 0 &&
+            h("div", { class: "empty-state" }, "Keine Kernentitäten"),
+          activeTab.value === "relations" &&
+            props.result.relations.length === 0 &&
+            h("div", { class: "empty-state" }, "Keine Beziehungsketten"),
         ]),
-        props.result.query && h('div', { class: 'header-topic' }, props.result.query),
-        props.result.simulationRequirement && h('div', { class: 'header-scenario' }, [
-          h('span', { class: 'scenario-label' }, '预测场景: '),
-          h('span', { class: 'scenario-text' }, props.result.simulationRequirement)
-        ])
-      ]),
-      
-      // Tab Navigation
-      h('div', { class: 'insight-tabs' }, [
-        h('button', {
-          class: ['insight-tab', { active: activeTab.value === 'facts' }],
-          onClick: () => { activeTab.value = 'facts' }
-        }, [
-          h('span', { class: 'tab-label' }, `当前关键记忆 (${props.result.facts.length})`)
-        ]),
-        h('button', {
-          class: ['insight-tab', { active: activeTab.value === 'entities' }],
-          onClick: () => { activeTab.value = 'entities' }
-        }, [
-          h('span', { class: 'tab-label' }, `核心实体 (${props.result.entities.length})`)
-        ]),
-        h('button', {
-          class: ['insight-tab', { active: activeTab.value === 'relations' }],
-          onClick: () => { activeTab.value = 'relations' }
-        }, [
-          h('span', { class: 'tab-label' }, `关系链 (${props.result.relations.length})`)
-        ]),
-        props.result.subQueries.length > 0 && h('button', {
-          class: ['insight-tab', { active: activeTab.value === 'subqueries' }],
-          onClick: () => { activeTab.value = 'subqueries' }
-        }, [
-          h('span', { class: 'tab-label' }, `子问题 (${props.result.subQueries.length})`)
-        ])
-      ]),
-      
-      // Tab Content
-      h('div', { class: 'insight-content' }, [
-        // Facts Tab
-        activeTab.value === 'facts' && props.result.facts.length > 0 && h('div', { class: 'facts-panel' }, [
-          h('div', { class: 'panel-header' }, [
-            h('span', { class: 'panel-title' }, '时序记忆中所关联的最新关键事实'),
-            h('span', { class: 'panel-count' }, `共 ${props.result.facts.length} 条`)
-          ]),
-          h('div', { class: 'facts-list' },
-            (expandedFacts.value ? props.result.facts : props.result.facts.slice(0, INITIAL_SHOW_COUNT)).map((fact, i) => 
-              h('div', { class: 'fact-item', key: i }, [
-                h('span', { class: 'fact-number' }, i + 1),
-                h('div', { class: 'fact-content' }, fact)
-              ])
-            )
-          ),
-          props.result.facts.length > INITIAL_SHOW_COUNT && h('button', {
-            class: 'expand-btn',
-            onClick: () => { expandedFacts.value = !expandedFacts.value }
-          }, expandedFacts.value ? `收起 ▲` : `展开全部 ${props.result.facts.length} 条 ▼`)
-        ]),
-        
-        // Entities Tab
-        activeTab.value === 'entities' && props.result.entities.length > 0 && h('div', { class: 'entities-panel' }, [
-          h('div', { class: 'panel-header' }, [
-            h('span', { class: 'panel-title' }, '核心实体'),
-            h('span', { class: 'panel-count' }, `共 ${props.result.entities.length} 个`)
-          ]),
-          h('div', { class: 'entities-grid' },
-            (expandedEntities.value ? props.result.entities : props.result.entities.slice(0, 12)).map((entity, i) => 
-              h('div', { class: 'entity-tag', key: i, title: entity.summary || '' }, [
-                h('span', { class: 'entity-name' }, entity.name),
-                h('span', { class: 'entity-type' }, entity.type),
-                entity.relatedFactsCount > 0 && h('span', { class: 'entity-fact-count' }, `${entity.relatedFactsCount}条`)
-              ])
-            )
-          ),
-          props.result.entities.length > 12 && h('button', {
-            class: 'expand-btn',
-            onClick: () => { expandedEntities.value = !expandedEntities.value }
-          }, expandedEntities.value ? `收起 ▲` : `展开全部 ${props.result.entities.length} 个 ▼`)
-        ]),
-        
-        // Relations Tab
-        activeTab.value === 'relations' && props.result.relations.length > 0 && h('div', { class: 'relations-panel' }, [
-          h('div', { class: 'panel-header' }, [
-            h('span', { class: 'panel-title' }, '关系链'),
-            h('span', { class: 'panel-count' }, `共 ${props.result.relations.length} 条`)
-          ]),
-          h('div', { class: 'relations-list' },
-            (expandedRelations.value ? props.result.relations : props.result.relations.slice(0, INITIAL_SHOW_COUNT)).map((rel, i) => 
-              h('div', { class: 'relation-item', key: i }, [
-                h('span', { class: 'rel-source' }, rel.source),
-                h('span', { class: 'rel-arrow' }, [
-                  h('span', { class: 'rel-line' }),
-                  h('span', { class: 'rel-label' }, rel.relation),
-                  h('span', { class: 'rel-line' })
-                ]),
-                h('span', { class: 'rel-target' }, rel.target)
-              ])
-            )
-          ),
-          props.result.relations.length > INITIAL_SHOW_COUNT && h('button', {
-            class: 'expand-btn',
-            onClick: () => { expandedRelations.value = !expandedRelations.value }
-          }, expandedRelations.value ? `收起 ▲` : `展开全部 ${props.result.relations.length} 条 ▼`)
-        ]),
-        
-        // Sub-queries Tab
-        activeTab.value === 'subqueries' && props.result.subQueries.length > 0 && h('div', { class: 'subqueries-panel' }, [
-          h('div', { class: 'panel-header' }, [
-            h('span', { class: 'panel-title' }, '漂移查询生成分析子问题'),
-            h('span', { class: 'panel-count' }, `共 ${props.result.subQueries.length} 个`)
-          ]),
-          h('div', { class: 'subqueries-list' },
-            props.result.subQueries.map((sq, i) => 
-              h('div', { class: 'subquery-item', key: i }, [
-                h('span', { class: 'subquery-number' }, `Q${i + 1}`),
-                h('div', { class: 'subquery-text' }, sq)
-              ])
-            )
-          )
-        ]),
-        
-        // Empty state
-        activeTab.value === 'facts' && props.result.facts.length === 0 && h('div', { class: 'empty-state' }, '暂无当前关键记忆'),
-        activeTab.value === 'entities' && props.result.entities.length === 0 && h('div', { class: 'empty-state' }, '暂无核心实体'),
-        activeTab.value === 'relations' && props.result.relations.length === 0 && h('div', { class: 'empty-state' }, '暂无关系链')
-      ])
-    ])
-  }
-}
+      ]);
+  },
+};
 
 // Panorama Display Component - Enhanced with Active/Historical tabs
 const PanoramaDisplay = {
-  props: ['result', 'resultLength'],
+  props: ["result", "resultLength"],
   setup(props) {
-    const activeTab = ref('active') // 'active', 'historical', 'entities'
-    const expandedActive = ref(false)
-    const expandedHistorical = ref(false)
-    const expandedEntities = ref(false)
-    const INITIAL_SHOW_COUNT = 5
-    
+    const activeTab = ref("active"); // 'active', 'historical', 'entities'
+    const expandedActive = ref(false);
+    const expandedHistorical = ref(false);
+    const expandedEntities = ref(false);
+    const INITIAL_SHOW_COUNT = 5;
+
     // Format result size for display
     const formatSize = (length) => {
-      if (!length) return ''
-      if (length >= 1000) {
-        return `${(length / 1000).toFixed(1)}k chars`
+      if (!length) {
+        return "";
       }
-      return `${length} chars`
-    }
-    
-    return () => h('div', { class: 'panorama-display' }, [
-      // Header Section
-      h('div', { class: 'panorama-header' }, [
-        h('div', { class: 'header-main' }, [
-          h('div', { class: 'header-title' }, 'Panorama Search'),
-          h('div', { class: 'header-stats' }, [
-            h('span', { class: 'stat-item' }, [
-              h('span', { class: 'stat-value' }, props.result.stats.nodes),
-              h('span', { class: 'stat-label' }, 'Nodes')
+      if (length >= 1000) {
+        return `${(length / 1000).toFixed(1)}k chars`;
+      }
+      return `${length} chars`;
+    };
+
+    return () =>
+      h("div", { class: "panorama-display" }, [
+        // Header Section
+        h("div", { class: "panorama-header" }, [
+          h("div", { class: "header-main" }, [
+            h("div", { class: "header-title" }, "Panorama Search"),
+            h("div", { class: "header-stats" }, [
+              h("span", { class: "stat-item" }, [
+                h("span", { class: "stat-value" }, props.result.stats.nodes),
+                h("span", { class: "stat-label" }, "Nodes"),
+              ]),
+              h("span", { class: "stat-divider" }, "/"),
+              h("span", { class: "stat-item" }, [
+                h("span", { class: "stat-value" }, props.result.stats.edges),
+                h("span", { class: "stat-label" }, "Edges"),
+              ]),
+              props.resultLength && h("span", { class: "stat-divider" }, "·"),
+              props.resultLength &&
+                h(
+                  "span",
+                  { class: "stat-size" },
+                  formatSize(props.resultLength)
+                ),
             ]),
-            h('span', { class: 'stat-divider' }, '/'),
-            h('span', { class: 'stat-item' }, [
-              h('span', { class: 'stat-value' }, props.result.stats.edges),
-              h('span', { class: 'stat-label' }, 'Edges')
+          ]),
+          props.result.query &&
+            h("div", { class: "header-topic" }, props.result.query),
+        ]),
+
+        // Tab Navigation
+        h("div", { class: "panorama-tabs" }, [
+          h(
+            "button",
+            {
+              class: ["panorama-tab", { active: activeTab.value === "active" }],
+              onClick: () => {
+                activeTab.value = "active";
+              },
+            },
+            [
+              h(
+                "span",
+                { class: "tab-label" },
+                `Aktive Erinnerungen (${props.result.activeFacts.length})`
+              ),
+            ]
+          ),
+          h(
+            "button",
+            {
+              class: [
+                "panorama-tab",
+                { active: activeTab.value === "historical" },
+              ],
+              onClick: () => {
+                activeTab.value = "historical";
+              },
+            },
+            [
+              h(
+                "span",
+                { class: "tab-label" },
+                `Historische Erinnerungen (${props.result.historicalFacts.length})`
+              ),
+            ]
+          ),
+          h(
+            "button",
+            {
+              class: [
+                "panorama-tab",
+                { active: activeTab.value === "entities" },
+              ],
+              onClick: () => {
+                activeTab.value = "entities";
+              },
+            },
+            [
+              h(
+                "span",
+                { class: "tab-label" },
+                `Beteiligte Entitäten (${props.result.entities.length})`
+              ),
+            ]
+          ),
+        ]),
+
+        // Tab Content
+        h("div", { class: "panorama-content" }, [
+          // Active Facts Tab
+          activeTab.value === "active" &&
+            h("div", { class: "facts-panel active-facts" }, [
+              h("div", { class: "panel-header" }, [
+                h("span", { class: "panel-title" }, "Aktive Erinnerungen"),
+                h(
+                  "span",
+                  { class: "panel-count" },
+                  `Gesamt: ${props.result.activeFacts.length}`
+                ),
+              ]),
+              props.result.activeFacts.length > 0
+                ? h(
+                    "div",
+                    { class: "facts-list" },
+                    (expandedActive.value
+                      ? props.result.activeFacts
+                      : props.result.activeFacts.slice(0, INITIAL_SHOW_COUNT)
+                    ).map((fact, i) =>
+                      h("div", { class: "fact-item active", key: i }, [
+                        h("span", { class: "fact-number" }, i + 1),
+                        h("div", { class: "fact-content" }, fact),
+                      ])
+                    )
+                  )
+                : h(
+                    "div",
+                    { class: "empty-state" },
+                    "Keine aktiven Erinnerungen"
+                  ),
+              props.result.activeFacts.length > INITIAL_SHOW_COUNT &&
+                h(
+                  "button",
+                  {
+                    class: "expand-btn",
+                    onClick: () => {
+                      expandedActive.value = !expandedActive.value;
+                    },
+                  },
+                  expandedActive.value
+                    ? "Einklappen ▲"
+                    : "Alle {{ props.result.activeFacts.length }} anzeigen ▼"
+                ),
             ]),
-            props.resultLength && h('span', { class: 'stat-divider' }, '·'),
-            props.resultLength && h('span', { class: 'stat-size' }, formatSize(props.resultLength))
-          ])
+
+          // Historical Facts Tab
+          activeTab.value === "historical" &&
+            h("div", { class: "facts-panel historical-facts" }, [
+              h("div", { class: "panel-header" }, [
+                h("span", { class: "panel-title" }, "Historische Erinnerungen"),
+                h(
+                  "span",
+                  { class: "panel-count" },
+                  `Gesamt: ${props.result.historicalFacts.length}`
+                ),
+              ]),
+              props.result.historicalFacts.length > 0
+                ? h(
+                    "div",
+                    { class: "facts-list" },
+                    (expandedHistorical.value
+                      ? props.result.historicalFacts
+                      : props.result.historicalFacts.slice(
+                          0,
+                          INITIAL_SHOW_COUNT
+                        )
+                    ).map((fact, i) =>
+                      h("div", { class: "fact-item historical", key: i }, [
+                        h("span", { class: "fact-number" }, i + 1),
+                        h("div", { class: "fact-content" }, [
+                          // 尝试提取时间信息 [time - time]
+                          (() => {
+                            const timeMatch = fact.match(/^\[(.+?)\]\s*(.*)$/);
+                            if (timeMatch) {
+                              return [
+                                h("span", { class: "fact-time" }, timeMatch[1]),
+                                h("span", { class: "fact-text" }, timeMatch[2]),
+                              ];
+                            }
+                            return h("span", { class: "fact-text" }, fact);
+                          })(),
+                        ]),
+                      ])
+                    )
+                  )
+                : h(
+                    "div",
+                    { class: "empty-state" },
+                    "Keine historischen Erinnerungen"
+                  ),
+              props.result.historicalFacts.length > INITIAL_SHOW_COUNT &&
+                h(
+                  "button",
+                  {
+                    class: "expand-btn",
+                    onClick: () => {
+                      expandedHistorical.value = !expandedHistorical.value;
+                    },
+                  },
+                  expandedHistorical.value
+                    ? "Einklappen ▲"
+                    : "Alle {{ props.result.historicalFacts.length }} anzeigen ▼"
+                ),
+            ]),
+
+          // Entities Tab
+          activeTab.value === "entities" &&
+            h("div", { class: "entities-panel" }, [
+              h("div", { class: "panel-header" }, [
+                h("span", { class: "panel-title" }, "Kernentitäten"),
+                h(
+                  "span",
+                  { class: "panel-count" },
+                  `Gesamt: ${props.result.entities.length}`
+                ),
+              ]),
+              props.result.entities.length > 0
+                ? h(
+                    "div",
+                    { class: "entities-grid" },
+                    (expandedEntities.value
+                      ? props.result.entities
+                      : props.result.entities.slice(0, 8)
+                    ).map((entity, i) =>
+                      h("div", { class: "entity-tag", key: i }, [
+                        h("span", { class: "entity-name" }, entity.name),
+                        entity.type &&
+                          h("span", { class: "entity-type" }, entity.type),
+                      ])
+                    )
+                  )
+                : h(
+                    "div",
+                    { class: "empty-state" },
+                    "Keine beteiligten Entitäten"
+                  ),
+              props.result.entities.length > 8 &&
+                h(
+                  "button",
+                  {
+                    class: "expand-btn",
+                    onClick: () => {
+                      expandedEntities.value = !expandedEntities.value;
+                    },
+                  },
+                  expandedEntities.value
+                    ? "收起 ▲"
+                    : `展开全部 ${props.result.entities.length} 个 ▼`
+                ),
+            ]),
         ]),
-        props.result.query && h('div', { class: 'header-topic' }, props.result.query)
-      ]),
-      
-      // Tab Navigation
-      h('div', { class: 'panorama-tabs' }, [
-        h('button', {
-          class: ['panorama-tab', { active: activeTab.value === 'active' }],
-          onClick: () => { activeTab.value = 'active' }
-        }, [
-          h('span', { class: 'tab-label' }, `当前有效记忆 (${props.result.activeFacts.length})`)
-        ]),
-        h('button', {
-          class: ['panorama-tab', { active: activeTab.value === 'historical' }],
-          onClick: () => { activeTab.value = 'historical' }
-        }, [
-          h('span', { class: 'tab-label' }, `历史记忆 (${props.result.historicalFacts.length})`)
-        ]),
-        h('button', {
-          class: ['panorama-tab', { active: activeTab.value === 'entities' }],
-          onClick: () => { activeTab.value = 'entities' }
-        }, [
-          h('span', { class: 'tab-label' }, `涉及实体 (${props.result.entities.length})`)
-        ])
-      ]),
-      
-      // Tab Content
-      h('div', { class: 'panorama-content' }, [
-        // Active Facts Tab
-        activeTab.value === 'active' && h('div', { class: 'facts-panel active-facts' }, [
-          h('div', { class: 'panel-header' }, [
-            h('span', { class: 'panel-title' }, '当前有效记忆'),
-            h('span', { class: 'panel-count' }, `共 ${props.result.activeFacts.length} 条`)
-          ]),
-          props.result.activeFacts.length > 0 ? h('div', { class: 'facts-list' },
-            (expandedActive.value ? props.result.activeFacts : props.result.activeFacts.slice(0, INITIAL_SHOW_COUNT)).map((fact, i) => 
-              h('div', { class: 'fact-item active', key: i }, [
-                h('span', { class: 'fact-number' }, i + 1),
-                h('div', { class: 'fact-content' }, fact)
-              ])
-            )
-          ) : h('div', { class: 'empty-state' }, '暂无当前有效记忆'),
-          props.result.activeFacts.length > INITIAL_SHOW_COUNT && h('button', {
-            class: 'expand-btn',
-            onClick: () => { expandedActive.value = !expandedActive.value }
-          }, expandedActive.value ? `收起 ▲` : `展开全部 ${props.result.activeFacts.length} 条 ▼`)
-        ]),
-        
-        // Historical Facts Tab
-        activeTab.value === 'historical' && h('div', { class: 'facts-panel historical-facts' }, [
-          h('div', { class: 'panel-header' }, [
-            h('span', { class: 'panel-title' }, '历史记忆'),
-            h('span', { class: 'panel-count' }, `共 ${props.result.historicalFacts.length} 条`)
-          ]),
-          props.result.historicalFacts.length > 0 ? h('div', { class: 'facts-list' },
-            (expandedHistorical.value ? props.result.historicalFacts : props.result.historicalFacts.slice(0, INITIAL_SHOW_COUNT)).map((fact, i) => 
-              h('div', { class: 'fact-item historical', key: i }, [
-                h('span', { class: 'fact-number' }, i + 1),
-                h('div', { class: 'fact-content' }, [
-                  // 尝试提取时间信息 [time - time]
-                  (() => {
-                    const timeMatch = fact.match(/^\[(.+?)\]\s*(.*)$/)
-                    if (timeMatch) {
-                      return [
-                        h('span', { class: 'fact-time' }, timeMatch[1]),
-                        h('span', { class: 'fact-text' }, timeMatch[2])
-                      ]
-                    }
-                    return h('span', { class: 'fact-text' }, fact)
-                  })()
-                ])
-              ])
-            )
-          ) : h('div', { class: 'empty-state' }, '暂无历史记忆'),
-          props.result.historicalFacts.length > INITIAL_SHOW_COUNT && h('button', {
-            class: 'expand-btn',
-            onClick: () => { expandedHistorical.value = !expandedHistorical.value }
-          }, expandedHistorical.value ? `收起 ▲` : `展开全部 ${props.result.historicalFacts.length} 条 ▼`)
-        ]),
-        
-        // Entities Tab
-        activeTab.value === 'entities' && h('div', { class: 'entities-panel' }, [
-          h('div', { class: 'panel-header' }, [
-            h('span', { class: 'panel-title' }, '涉及实体'),
-            h('span', { class: 'panel-count' }, `共 ${props.result.entities.length} 个`)
-          ]),
-          props.result.entities.length > 0 ? h('div', { class: 'entities-grid' },
-            (expandedEntities.value ? props.result.entities : props.result.entities.slice(0, 8)).map((entity, i) => 
-              h('div', { class: 'entity-tag', key: i }, [
-                h('span', { class: 'entity-name' }, entity.name),
-                entity.type && h('span', { class: 'entity-type' }, entity.type)
-              ])
-            )
-          ) : h('div', { class: 'empty-state' }, '暂无涉及实体'),
-          props.result.entities.length > 8 && h('button', {
-            class: 'expand-btn',
-            onClick: () => { expandedEntities.value = !expandedEntities.value }
-          }, expandedEntities.value ? `收起 ▲` : `展开全部 ${props.result.entities.length} 个 ▼`)
-        ])
-      ])
-    ])
-  }
-}
+      ]);
+  },
+};
 
 // Interview Display Component - Conversation Style (Q&A Format)
 const InterviewDisplay = {
-  props: ['result', 'resultLength'],
+  props: ["result", "resultLength"],
   setup(props) {
     // Format result size for display
     const formatSize = (length) => {
-      if (!length) return ''
-      if (length >= 1000) {
-        return `${(length / 1000).toFixed(1)}k chars`
+      if (!length) {
+        return "";
       }
-      return `${length} chars`
-    }
-    
+      if (length >= 1000) {
+        return `${(length / 1000).toFixed(1)}k chars`;
+      }
+      return `${length} chars`;
+    };
+
     // Clean quote text - remove leading list numbers to avoid double numbering
     const cleanQuoteText = (text) => {
-      if (!text) return ''
+      if (!text) {
+        return "";
+      }
       // Remove leading patterns like "1. ", "2. ", "1、", "（1）", "(1)" etc.
-      return text.replace(/^\s*\d+[\.\、\)）]\s*/, '').trim()
-    }
-    
-    const activeIndex = ref(0)
-    const expandedAnswers = ref(new Set())
+      return text.replace(/^\s*\d+[.、)）]\s*/, "").trim();
+    };
+
+    const activeIndex = ref(0);
+    const expandedAnswers = ref(new Set());
     // 为每个问题-回答对维护独立的平台选择状态
-    const platformTabs = reactive({}) // { 'agentIdx-qIdx': 'twitter' | 'reddit' }
-    
+    const platformTabs = reactive({}); // { 'agentIdx-qIdx': 'twitter' | 'reddit' }
+
     // 获取某个问题的当前平台选择
     const getPlatformTab = (agentIdx, qIdx) => {
-      const key = `${agentIdx}-${qIdx}`
-      return platformTabs[key] || 'twitter'
-    }
-    
+      const key = `${agentIdx}-${qIdx}`;
+      return platformTabs[key] || "twitter";
+    };
+
     // 设置某个问题的平台选择
     const setPlatformTab = (agentIdx, qIdx, platform) => {
-      const key = `${agentIdx}-${qIdx}`
-      platformTabs[key] = platform
-    }
-    
+      const key = `${agentIdx}-${qIdx}`;
+      platformTabs[key] = platform;
+    };
+
     const toggleAnswer = (key) => {
-      const newSet = new Set(expandedAnswers.value)
+      const newSet = new Set(expandedAnswers.value);
       if (newSet.has(key)) {
-        newSet.delete(key)
+        newSet.delete(key);
       } else {
-        newSet.add(key)
+        newSet.add(key);
       }
-      expandedAnswers.value = newSet
-    }
-    
+      expandedAnswers.value = newSet;
+    };
+
     const formatAnswer = (text, expanded) => {
-      if (!text) return ''
-      if (expanded || text.length <= 400) return text
-      return text.substring(0, 400) + '...'
-    }
-    
+      if (!text) {
+        return "";
+      }
+      if (expanded || text.length <= 400) {
+        return text;
+      }
+      return text.substring(0, 400) + "...";
+    };
+
     // 检查是否为平台占位文本
     const isPlaceholderText = (text) => {
-      if (!text) return true
-      const t = text.trim()
-      return t === '（该平台未获得回复）' || t === '(该平台未获得回复)' || t === '[无回复]'
-    }
+      if (!text) {
+        return true;
+      }
+      const t = text.trim();
+      return (
+        t === "（该平台未获得回复）" ||
+        t === "(该平台未获得回复)" ||
+        t === "[无回复]"
+      );
+    };
 
     // 尝试按问题编号分割回答
     const splitAnswerByQuestions = (answerText, questionCount) => {
-      if (!answerText || questionCount <= 0) return [answerText]
-      if (isPlaceholderText(answerText)) return ['']
+      if (!answerText || questionCount <= 0) {
+        return [answerText];
+      }
+      if (isPlaceholderText(answerText)) {
+        return [""];
+      }
 
       // 支持两种编号格式：
       // 1. "问题X：" 或 "问题X:" （中文格式，后端新格式）
       // 2. "1. " 或 "\n1. " （数字+点，旧格式兼容）
-      let matches = []
-      let match
+      let matches = [];
+      let match;
 
       // 优先尝试 "问题X：" 格式
-      const cnPattern = /(?:^|[\r\n]+)问题(\d+)[：:]\s*/g
+      const cnPattern = /(?:^|[\r\n]+)问题(\d+)[：:]\s*/g;
       while ((match = cnPattern.exec(answerText)) !== null) {
         matches.push({
-          num: parseInt(match[1]),
+          num: Number.parseInt(match[1]),
           index: match.index,
-          fullMatch: match[0]
-        })
+          fullMatch: match[0],
+        });
       }
 
       // 如果没匹配到，回退到 "数字." 格式
       if (matches.length === 0) {
-        const numPattern = /(?:^|[\r\n]+)(\d+)\.\s+/g
+        const numPattern = /(?:^|[\r\n]+)(\d+)\.\s+/g;
         while ((match = numPattern.exec(answerText)) !== null) {
           matches.push({
-            num: parseInt(match[1]),
+            num: Number.parseInt(match[1]),
             index: match.index,
-            fullMatch: match[0]
-          })
+            fullMatch: match[0],
+          });
         }
       }
 
       // 如果没有找到编号或只找到一个，返回整体
       if (matches.length <= 1) {
         const cleaned = answerText
-          .replace(/^问题\d+[：:]\s*/, '')
-          .replace(/^\d+\.\s+/, '')
-          .trim()
-        return [cleaned || answerText]
+          .replace(/^问题\d+[：:]\s*/, "")
+          .replace(/^\d+\.\s+/, "")
+          .trim();
+        return [cleaned || answerText];
       }
 
       // 按编号提取各部分
-      const parts = []
+      const parts = [];
       for (let i = 0; i < matches.length; i++) {
-        const current = matches[i]
-        const next = matches[i + 1]
+        const current = matches[i];
+        const next = matches[i + 1];
 
-        const startIdx = current.index + current.fullMatch.length
-        const endIdx = next ? next.index : answerText.length
+        const startIdx = current.index + current.fullMatch.length;
+        const endIdx = next ? next.index : answerText.length;
 
-        let part = answerText.substring(startIdx, endIdx).trim()
-        part = part.replace(/[\r\n]+$/, '').trim()
-        parts.push(part)
+        let part = answerText.substring(startIdx, endIdx).trim();
+        part = part.replace(/[\r\n]+$/, "").trim();
+        parts.push(part);
       }
 
-      if (parts.length > 0 && parts.some(p => p)) {
-        return parts
+      if (parts.length > 0 && parts.some((p) => p)) {
+        return parts;
       }
 
-      return [answerText]
-    }
-    
+      return [answerText];
+    };
+
     // 获取某个问题对应的回答
     const getAnswerForQuestion = (interview, qIdx, platform) => {
-      const answer = platform === 'twitter' ? interview.twitterAnswer : (interview.redditAnswer || interview.twitterAnswer)
-      if (!answer || isPlaceholderText(answer)) return answer || ''
+      const answer =
+        platform === "twitter"
+          ? interview.twitterAnswer
+          : interview.redditAnswer || interview.twitterAnswer;
+      if (!answer || isPlaceholderText(answer)) {
+        return answer || "";
+      }
 
-      const questionCount = interview.questions?.length || 1
-      const answers = splitAnswerByQuestions(answer, questionCount)
+      const questionCount = interview.questions?.length || 1;
+      const answers = splitAnswerByQuestions(answer, questionCount);
 
       // 分割成功且索引有效
       if (answers.length > 1 && qIdx < answers.length) {
-        return answers[qIdx] || ''
+        return answers[qIdx] || "";
       }
 
       // 分割失败：第一个问题返回完整回答，其余返回空
-      return qIdx === 0 ? answer : ''
-    }
-    
+      return qIdx === 0 ? answer : "";
+    };
+
     // 检查某个问题是否有双平台回答（过滤占位文本）
     const hasMultiplePlatforms = (interview, qIdx) => {
-      if (!interview.twitterAnswer || !interview.redditAnswer) return false
-      const twitterAnswer = getAnswerForQuestion(interview, qIdx, 'twitter')
-      const redditAnswer = getAnswerForQuestion(interview, qIdx, 'reddit')
+      if (!(interview.twitterAnswer && interview.redditAnswer)) {
+        return false;
+      }
+      const twitterAnswer = getAnswerForQuestion(interview, qIdx, "twitter");
+      const redditAnswer = getAnswerForQuestion(interview, qIdx, "reddit");
       // 两个平台都有真实回答（非占位文本）且内容不同
-      return !isPlaceholderText(twitterAnswer) && !isPlaceholderText(redditAnswer) && twitterAnswer !== redditAnswer
-    }
-    
-    return () => h('div', { class: 'interview-display' }, [
-      // Header Section
-      h('div', { class: 'interview-header' }, [
-        h('div', { class: 'header-main' }, [
-          h('div', { class: 'header-title' }, 'Agent Interview'),
-          h('div', { class: 'header-stats' }, [
-            h('span', { class: 'stat-item' }, [
-              h('span', { class: 'stat-value' }, props.result.successCount || props.result.interviews.length),
-              h('span', { class: 'stat-label' }, 'Interviewed')
-            ]),
-            props.result.totalCount > 0 && h('span', { class: 'stat-divider' }, '/'),
-            props.result.totalCount > 0 && h('span', { class: 'stat-item' }, [
-              h('span', { class: 'stat-value' }, props.result.totalCount),
-              h('span', { class: 'stat-label' }, 'Total')
-            ]),
-            props.resultLength && h('span', { class: 'stat-divider' }, '·'),
-            props.resultLength && h('span', { class: 'stat-size' }, formatSize(props.resultLength))
-          ])
-        ]),
-        props.result.topic && h('div', { class: 'header-topic' }, props.result.topic)
-      ]),
-      
-      // Agent Selector Tabs
-      props.result.interviews.length > 0 && h('div', { class: 'agent-tabs' }, 
-        props.result.interviews.map((interview, i) => h('button', {
-          class: ['agent-tab', { active: activeIndex.value === i }],
-          key: i,
-          onClick: () => { activeIndex.value = i }
-        }, [
-          h('span', { class: 'tab-avatar' }, interview.name ? interview.name.charAt(0) : (i + 1)),
-          h('span', { class: 'tab-name' }, interview.title || interview.name || `Agent ${i + 1}`)
-        ]))
-      ),
-      
-      // Active Interview Detail
-      props.result.interviews.length > 0 && h('div', { class: 'interview-detail' }, [
-        // Agent Profile Card
-        h('div', { class: 'agent-profile' }, [
-          h('div', { class: 'profile-avatar' }, props.result.interviews[activeIndex.value]?.name?.charAt(0) || 'A'),
-          h('div', { class: 'profile-info' }, [
-            h('div', { class: 'profile-name' }, props.result.interviews[activeIndex.value]?.name || 'Agent'),
-            h('div', { class: 'profile-role' }, props.result.interviews[activeIndex.value]?.role || ''),
-            props.result.interviews[activeIndex.value]?.bio && h('div', { class: 'profile-bio' }, props.result.interviews[activeIndex.value].bio)
-          ])
-        ]),
-        
-        // Selection Reason - 选择理由
-        props.result.interviews[activeIndex.value]?.selectionReason && h('div', { class: 'selection-reason' }, [
-          h('div', { class: 'reason-label' }, '选择理由'),
-          h('div', { class: 'reason-content' }, props.result.interviews[activeIndex.value].selectionReason)
-        ]),
-        
-        // Q&A Conversation Thread - 一问一答样式
-        h('div', { class: 'qa-thread' }, 
-          (props.result.interviews[activeIndex.value]?.questions?.length > 0 
-            ? props.result.interviews[activeIndex.value].questions 
-            : [props.result.interviews[activeIndex.value]?.question || 'No question available']
-          ).map((question, qIdx) => {
-            const interview = props.result.interviews[activeIndex.value]
-            const currentPlatform = getPlatformTab(activeIndex.value, qIdx)
-            const answerText = getAnswerForQuestion(interview, qIdx, currentPlatform)
-            const hasDualPlatform = hasMultiplePlatforms(interview, qIdx)
-            const expandKey = `${activeIndex.value}-${qIdx}`
-            const isExpanded = expandedAnswers.value.has(expandKey)
-            const isPlaceholder = isPlaceholderText(answerText)
+      return (
+        !(
+          isPlaceholderText(twitterAnswer) || isPlaceholderText(redditAnswer)
+        ) && twitterAnswer !== redditAnswer
+      );
+    };
 
-            return h('div', { class: 'qa-pair', key: qIdx }, [
-              // Question Block
-              h('div', { class: 'qa-question' }, [
-                h('div', { class: 'qa-badge q-badge' }, `Q${qIdx + 1}`),
-                h('div', { class: 'qa-content' }, [
-                  h('div', { class: 'qa-sender' }, 'Interviewer'),
-                  h('div', { class: 'qa-text' }, question)
-                ])
+    return () =>
+      h("div", { class: "interview-display" }, [
+        // Header Section
+        h("div", { class: "interview-header" }, [
+          h("div", { class: "header-main" }, [
+            h("div", { class: "header-title" }, "Agent Interview"),
+            h("div", { class: "header-stats" }, [
+              h("span", { class: "stat-item" }, [
+                h(
+                  "span",
+                  { class: "stat-value" },
+                  props.result.successCount || props.result.interviews.length
+                ),
+                h("span", { class: "stat-label" }, "Interviewed"),
+              ]),
+              props.result.totalCount > 0 &&
+                h("span", { class: "stat-divider" }, "/"),
+              props.result.totalCount > 0 &&
+                h("span", { class: "stat-item" }, [
+                  h("span", { class: "stat-value" }, props.result.totalCount),
+                  h("span", { class: "stat-label" }, "Total"),
+                ]),
+              props.resultLength && h("span", { class: "stat-divider" }, "·"),
+              props.resultLength &&
+                h(
+                  "span",
+                  { class: "stat-size" },
+                  formatSize(props.resultLength)
+                ),
+            ]),
+          ]),
+          props.result.topic &&
+            h("div", { class: "header-topic" }, props.result.topic),
+        ]),
+
+        // Agent Selector Tabs
+        props.result.interviews.length > 0 &&
+          h(
+            "div",
+            { class: "agent-tabs" },
+            props.result.interviews.map((interview, i) =>
+              h(
+                "button",
+                {
+                  class: ["agent-tab", { active: activeIndex.value === i }],
+                  key: i,
+                  onClick: () => {
+                    activeIndex.value = i;
+                  },
+                },
+                [
+                  h(
+                    "span",
+                    { class: "tab-avatar" },
+                    interview.name ? interview.name.charAt(0) : i + 1
+                  ),
+                  h(
+                    "span",
+                    { class: "tab-name" },
+                    interview.title || interview.name || `Agent ${i + 1}`
+                  ),
+                ]
+              )
+            )
+          ),
+
+        // Active Interview Detail
+        props.result.interviews.length > 0 &&
+          h("div", { class: "interview-detail" }, [
+            // Agent Profile Card
+            h("div", { class: "agent-profile" }, [
+              h(
+                "div",
+                { class: "profile-avatar" },
+                props.result.interviews[activeIndex.value]?.name?.charAt(0) ||
+                  "A"
+              ),
+              h("div", { class: "profile-info" }, [
+                h(
+                  "div",
+                  { class: "profile-name" },
+                  props.result.interviews[activeIndex.value]?.name || "Agent"
+                ),
+                h(
+                  "div",
+                  { class: "profile-role" },
+                  props.result.interviews[activeIndex.value]?.role || ""
+                ),
+                props.result.interviews[activeIndex.value]?.bio &&
+                  h(
+                    "div",
+                    { class: "profile-bio" },
+                    props.result.interviews[activeIndex.value].bio
+                  ),
+              ]),
+            ]),
+
+            // Selection Reason - 选择理由
+            props.result.interviews[activeIndex.value]?.selectionReason &&
+              h("div", { class: "selection-reason" }, [
+                h("div", { class: "reason-label" }, "选择理由"),
+                h(
+                  "div",
+                  { class: "reason-content" },
+                  props.result.interviews[activeIndex.value].selectionReason
+                ),
               ]),
 
-              // Answer Block
-              answerText && h('div', { class: ['qa-answer', { 'answer-placeholder': isPlaceholder }] }, [
-                h('div', { class: 'qa-badge a-badge' }, `A${qIdx + 1}`),
-                h('div', { class: 'qa-content' }, [
-                  h('div', { class: 'qa-answer-header' }, [
-                    h('div', { class: 'qa-sender' }, interview?.name || 'Agent'),
-                    // 双平台切换按钮（仅在有真实双平台回答时显示）
-                    hasDualPlatform && h('div', { class: 'platform-switch' }, [
-                      h('button', {
-                        class: ['platform-btn', { active: currentPlatform === 'twitter' }],
-                        onClick: (e) => { e.stopPropagation(); setPlatformTab(activeIndex.value, qIdx, 'twitter') }
-                      }, [
-                        h('svg', { class: 'platform-icon', viewBox: '0 0 24 24', width: 12, height: 12, fill: 'none', stroke: 'currentColor', 'stroke-width': 2 }, [
-                          h('circle', { cx: '12', cy: '12', r: '10' }),
-                          h('line', { x1: '2', y1: '12', x2: '22', y2: '12' }),
-                          h('path', { d: 'M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z' })
-                        ]),
-                        h('span', {}, '世界1')
-                      ]),
-                      h('button', {
-                        class: ['platform-btn', { active: currentPlatform === 'reddit' }],
-                        onClick: (e) => { e.stopPropagation(); setPlatformTab(activeIndex.value, qIdx, 'reddit') }
-                      }, [
-                        h('svg', { class: 'platform-icon', viewBox: '0 0 24 24', width: 12, height: 12, fill: 'none', stroke: 'currentColor', 'stroke-width': 2 }, [
-                          h('path', { d: 'M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z' })
-                        ]),
-                        h('span', {}, '世界2')
-                      ])
-                    ])
-                  ]),
-                  h('div', {
-                    class: ['qa-text', 'answer-text', { 'placeholder-text': isPlaceholder }],
-                    innerHTML: isPlaceholder
-                      ? answerText
-                      : formatAnswer(answerText, isExpanded)
-                          .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-                          .replace(/\n/g, '<br>')
-                  }),
-                  // Expand/Collapse Button（占位文本不显示）
-                  !isPlaceholder && answerText.length > 400 && h('button', {
-                    class: 'expand-answer-btn',
-                    onClick: () => toggleAnswer(expandKey)
-                  }, isExpanded ? 'Show Less' : 'Show More')
-                ])
-              ])
-            ])
-          })
-        ),
-        
-        // Key Quotes Section
-        props.result.interviews[activeIndex.value]?.quotes?.length > 0 && h('div', { class: 'quotes-section' }, [
-          h('div', { class: 'quotes-header' }, 'Key Quotes'),
-          h('div', { class: 'quotes-list' },
-            props.result.interviews[activeIndex.value].quotes.slice(0, 3).map((quote, qi) => {
-              const cleanedQuote = cleanQuoteText(quote)
-              const displayQuote = cleanedQuote.length > 200 ? cleanedQuote.substring(0, 200) + '...' : cleanedQuote
-              return h('blockquote', { 
-                key: qi, 
-                class: 'quote-item',
-                innerHTML: renderMarkdown(displayQuote)
-              })
-            })
-          )
-        ])
-      ]),
+            // Q&A Conversation Thread - 一问一答样式
+            h(
+              "div",
+              { class: "qa-thread" },
+              (props.result.interviews[activeIndex.value]?.questions?.length > 0
+                ? props.result.interviews[activeIndex.value].questions
+                : [
+                    props.result.interviews[activeIndex.value]?.question ||
+                      "No question available",
+                  ]
+              ).map((question, qIdx) => {
+                const interview = props.result.interviews[activeIndex.value];
+                const currentPlatform = getPlatformTab(activeIndex.value, qIdx);
+                const answerText = getAnswerForQuestion(
+                  interview,
+                  qIdx,
+                  currentPlatform
+                );
+                const hasDualPlatform = hasMultiplePlatforms(interview, qIdx);
+                const expandKey = `${activeIndex.value}-${qIdx}`;
+                const isExpanded = expandedAnswers.value.has(expandKey);
+                const isPlaceholder = isPlaceholderText(answerText);
 
-      // Summary Section (Collapsible)
-      props.result.summary && h('div', { class: 'summary-section' }, [
-        h('div', { class: 'summary-header' }, 'Interview Summary'),
-        h('div', { 
-          class: 'summary-content',
-          innerHTML: renderMarkdown(props.result.summary.length > 500 ? props.result.summary.substring(0, 500) + '...' : props.result.summary)
-        })
-      ])
-    ])
-  }
-}
+                return h("div", { class: "qa-pair", key: qIdx }, [
+                  // Question Block
+                  h("div", { class: "qa-question" }, [
+                    h("div", { class: "qa-badge q-badge" }, `Q${qIdx + 1}`),
+                    h("div", { class: "qa-content" }, [
+                      h("div", { class: "qa-sender" }, "Interviewer"),
+                      h("div", { class: "qa-text" }, question),
+                    ]),
+                  ]),
+
+                  // Answer Block
+                  answerText &&
+                    h(
+                      "div",
+                      {
+                        class: [
+                          "qa-answer",
+                          { "answer-placeholder": isPlaceholder },
+                        ],
+                      },
+                      [
+                        h("div", { class: "qa-badge a-badge" }, `A${qIdx + 1}`),
+                        h("div", { class: "qa-content" }, [
+                          h("div", { class: "qa-answer-header" }, [
+                            h(
+                              "div",
+                              { class: "qa-sender" },
+                              interview?.name || "Agent"
+                            ),
+                            // 双平台切换按钮（仅在有真实双平台回答时显示）
+                            hasDualPlatform &&
+                              h("div", { class: "platform-switch" }, [
+                                h(
+                                  "button",
+                                  {
+                                    class: [
+                                      "platform-btn",
+                                      { active: currentPlatform === "twitter" },
+                                    ],
+                                    onClick: (e) => {
+                                      e.stopPropagation();
+                                      setPlatformTab(
+                                        activeIndex.value,
+                                        qIdx,
+                                        "twitter"
+                                      );
+                                    },
+                                  },
+                                  [
+                                    h(
+                                      "svg",
+                                      {
+                                        class: "platform-icon",
+                                        viewBox: "0 0 24 24",
+                                        width: 12,
+                                        height: 12,
+                                        fill: "none",
+                                        stroke: "currentColor",
+                                        "stroke-width": 2,
+                                      },
+                                      [
+                                        h("circle", {
+                                          cx: "12",
+                                          cy: "12",
+                                          r: "10",
+                                        }),
+                                        h("line", {
+                                          x1: "2",
+                                          y1: "12",
+                                          x2: "22",
+                                          y2: "12",
+                                        }),
+                                        h("path", {
+                                          d: "M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z",
+                                        }),
+                                      ]
+                                    ),
+                                    h("span", {}, "世界1"),
+                                  ]
+                                ),
+                                h(
+                                  "button",
+                                  {
+                                    class: [
+                                      "platform-btn",
+                                      { active: currentPlatform === "reddit" },
+                                    ],
+                                    onClick: (e) => {
+                                      e.stopPropagation();
+                                      setPlatformTab(
+                                        activeIndex.value,
+                                        qIdx,
+                                        "reddit"
+                                      );
+                                    },
+                                  },
+                                  [
+                                    h(
+                                      "svg",
+                                      {
+                                        class: "platform-icon",
+                                        viewBox: "0 0 24 24",
+                                        width: 12,
+                                        height: 12,
+                                        fill: "none",
+                                        stroke: "currentColor",
+                                        "stroke-width": 2,
+                                      },
+                                      [
+                                        h("path", {
+                                          d: "M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z",
+                                        }),
+                                      ]
+                                    ),
+                                    h("span", {}, "世界2"),
+                                  ]
+                                ),
+                              ]),
+                          ]),
+                          h("div", {
+                            class: [
+                              "qa-text",
+                              "answer-text",
+                              { "placeholder-text": isPlaceholder },
+                            ],
+                            innerHTML: isPlaceholder
+                              ? answerText
+                              : formatAnswer(answerText, isExpanded)
+                                  .replace(
+                                    /\*\*(.+?)\*\*/g,
+                                    "<strong>$1</strong>"
+                                  )
+                                  .replace(/\n/g, "<br>"),
+                          }),
+                          // Expand/Collapse Button（占位文本不显示）
+                          !isPlaceholder &&
+                            answerText.length > 400 &&
+                            h(
+                              "button",
+                              {
+                                class: "expand-answer-btn",
+                                onClick: () => toggleAnswer(expandKey),
+                              },
+                              isExpanded ? "Show Less" : "Show More"
+                            ),
+                        ]),
+                      ]
+                    ),
+                ]);
+              })
+            ),
+
+            // Key Quotes Section
+            props.result.interviews[activeIndex.value]?.quotes?.length > 0 &&
+              h("div", { class: "quotes-section" }, [
+                h("div", { class: "quotes-header" }, "Key Quotes"),
+                h(
+                  "div",
+                  { class: "quotes-list" },
+                  props.result.interviews[activeIndex.value].quotes
+                    .slice(0, 3)
+                    .map((quote, qi) => {
+                      const cleanedQuote = cleanQuoteText(quote);
+                      const displayQuote =
+                        cleanedQuote.length > 200
+                          ? cleanedQuote.substring(0, 200) + "..."
+                          : cleanedQuote;
+                      return h("blockquote", {
+                        key: qi,
+                        class: "quote-item",
+                        innerHTML: renderMarkdown(displayQuote),
+                      });
+                    })
+                ),
+              ]),
+          ]),
+
+        // Summary Section (Collapsible)
+        props.result.summary &&
+          h("div", { class: "summary-section" }, [
+            h("div", { class: "summary-header" }, "Interview Summary"),
+            h("div", {
+              class: "summary-content",
+              innerHTML: renderMarkdown(
+                props.result.summary.length > 500
+                  ? props.result.summary.substring(0, 500) + "..."
+                  : props.result.summary
+              ),
+            }),
+          ]),
+      ]);
+  },
+};
 
 // Quick Search Display Component - Enhanced with full data rendering
 const QuickSearchDisplay = {
-  props: ['result', 'resultLength'],
+  props: ["result", "resultLength"],
   setup(props) {
-    const activeTab = ref('facts') // 'facts', 'edges', 'nodes'
-    const expandedFacts = ref(false)
-    const INITIAL_SHOW_COUNT = 5
-    
+    const activeTab = ref("facts"); // 'facts', 'edges', 'nodes'
+    const expandedFacts = ref(false);
+    const INITIAL_SHOW_COUNT = 5;
+
     // Check if there are edges or nodes to show tabs
-    const hasEdges = computed(() => props.result.edges && props.result.edges.length > 0)
-    const hasNodes = computed(() => props.result.nodes && props.result.nodes.length > 0)
-    const showTabs = computed(() => hasEdges.value || hasNodes.value)
-    
+    const hasEdges = computed(
+      () => props.result.edges && props.result.edges.length > 0
+    );
+    const hasNodes = computed(
+      () => props.result.nodes && props.result.nodes.length > 0
+    );
+    const showTabs = computed(() => hasEdges.value || hasNodes.value);
+
     // Format result size for display
     const formatSize = (length) => {
-      if (!length) return ''
-      if (length >= 1000) {
-        return `${(length / 1000).toFixed(1)}k chars`
+      if (!length) {
+        return "";
       }
-      return `${length} chars`
-    }
-    
-    return () => h('div', { class: 'quick-search-display' }, [
-      // Header Section
-      h('div', { class: 'quicksearch-header' }, [
-        h('div', { class: 'header-main' }, [
-          h('div', { class: 'header-title' }, 'Quick Search'),
-          h('div', { class: 'header-stats' }, [
-            h('span', { class: 'stat-item' }, [
-              h('span', { class: 'stat-value' }, props.result.count || props.result.facts.length),
-              h('span', { class: 'stat-label' }, 'Results')
+      if (length >= 1000) {
+        return `${(length / 1000).toFixed(1)}k chars`;
+      }
+      return `${length} chars`;
+    };
+
+    return () =>
+      h("div", { class: "quick-search-display" }, [
+        // Header Section
+        h("div", { class: "quicksearch-header" }, [
+          h("div", { class: "header-main" }, [
+            h("div", { class: "header-title" }, "Quick Search"),
+            h("div", { class: "header-stats" }, [
+              h("span", { class: "stat-item" }, [
+                h(
+                  "span",
+                  { class: "stat-value" },
+                  props.result.count || props.result.facts.length
+                ),
+                h("span", { class: "stat-label" }, "Results"),
+              ]),
+              props.resultLength && h("span", { class: "stat-divider" }, "·"),
+              props.resultLength &&
+                h(
+                  "span",
+                  { class: "stat-size" },
+                  formatSize(props.resultLength)
+                ),
             ]),
-            props.resultLength && h('span', { class: 'stat-divider' }, '·'),
-            props.resultLength && h('span', { class: 'stat-size' }, formatSize(props.resultLength))
-          ])
-        ]),
-        props.result.query && h('div', { class: 'header-query' }, [
-          h('span', { class: 'query-label' }, '搜索: '),
-          h('span', { class: 'query-text' }, props.result.query)
-        ])
-      ]),
-      
-      // Tab Navigation (only show if there are edges or nodes)
-      showTabs.value && h('div', { class: 'quicksearch-tabs' }, [
-        h('button', {
-          class: ['quicksearch-tab', { active: activeTab.value === 'facts' }],
-          onClick: () => { activeTab.value = 'facts' }
-        }, [
-          h('span', { class: 'tab-label' }, `事实 (${props.result.facts.length})`)
-        ]),
-        hasEdges.value && h('button', {
-          class: ['quicksearch-tab', { active: activeTab.value === 'edges' }],
-          onClick: () => { activeTab.value = 'edges' }
-        }, [
-          h('span', { class: 'tab-label' }, `关系 (${props.result.edges.length})`)
-        ]),
-        hasNodes.value && h('button', {
-          class: ['quicksearch-tab', { active: activeTab.value === 'nodes' }],
-          onClick: () => { activeTab.value = 'nodes' }
-        }, [
-          h('span', { class: 'tab-label' }, `节点 (${props.result.nodes.length})`)
-        ])
-      ]),
-      
-      // Content Area
-      h('div', { class: ['quicksearch-content', { 'no-tabs': !showTabs.value }] }, [
-        // Facts (always show if no tabs, or when facts tab is active)
-        ((!showTabs.value) || activeTab.value === 'facts') && h('div', { class: 'facts-panel' }, [
-          !showTabs.value && h('div', { class: 'panel-header' }, [
-            h('span', { class: 'panel-title' }, '搜索结果'),
-            h('span', { class: 'panel-count' }, `共 ${props.result.facts.length} 条`)
           ]),
-          props.result.facts.length > 0 ? h('div', { class: 'facts-list' },
-            (expandedFacts.value ? props.result.facts : props.result.facts.slice(0, INITIAL_SHOW_COUNT)).map((fact, i) => 
-              h('div', { class: 'fact-item', key: i }, [
-                h('span', { class: 'fact-number' }, i + 1),
-                h('div', { class: 'fact-content' }, fact)
-              ])
-            )
-          ) : h('div', { class: 'empty-state' }, '未找到相关结果'),
-          props.result.facts.length > INITIAL_SHOW_COUNT && h('button', {
-            class: 'expand-btn',
-            onClick: () => { expandedFacts.value = !expandedFacts.value }
-          }, expandedFacts.value ? `收起 ▲` : `展开全部 ${props.result.facts.length} 条 ▼`)
+          props.result.query &&
+            h("div", { class: "header-query" }, [
+              h("span", { class: "query-label" }, "搜索: "),
+              h("span", { class: "query-text" }, props.result.query),
+            ]),
         ]),
-        
-        // Edges Tab
-        activeTab.value === 'edges' && hasEdges.value && h('div', { class: 'edges-panel' }, [
-          h('div', { class: 'panel-header' }, [
-            h('span', { class: 'panel-title' }, '相关关系'),
-            h('span', { class: 'panel-count' }, `共 ${props.result.edges.length} 条`)
+
+        // Tab Navigation (only show if there are edges or nodes)
+        showTabs.value &&
+          h("div", { class: "quicksearch-tabs" }, [
+            h(
+              "button",
+              {
+                class: [
+                  "quicksearch-tab",
+                  { active: activeTab.value === "facts" },
+                ],
+                onClick: () => {
+                  activeTab.value = "facts";
+                },
+              },
+              [
+                h(
+                  "span",
+                  { class: "tab-label" },
+                  `事实 (${props.result.facts.length})`
+                ),
+              ]
+            ),
+            hasEdges.value &&
+              h(
+                "button",
+                {
+                  class: [
+                    "quicksearch-tab",
+                    { active: activeTab.value === "edges" },
+                  ],
+                  onClick: () => {
+                    activeTab.value = "edges";
+                  },
+                },
+                [
+                  h(
+                    "span",
+                    { class: "tab-label" },
+                    `关系 (${props.result.edges.length})`
+                  ),
+                ]
+              ),
+            hasNodes.value &&
+              h(
+                "button",
+                {
+                  class: [
+                    "quicksearch-tab",
+                    { active: activeTab.value === "nodes" },
+                  ],
+                  onClick: () => {
+                    activeTab.value = "nodes";
+                  },
+                },
+                [
+                  h(
+                    "span",
+                    { class: "tab-label" },
+                    `节点 (${props.result.nodes.length})`
+                  ),
+                ]
+              ),
           ]),
-          h('div', { class: 'edges-list' },
-            props.result.edges.map((edge, i) => 
-              h('div', { class: 'edge-item', key: i }, [
-                h('span', { class: 'edge-source' }, edge.source),
-                h('span', { class: 'edge-arrow' }, [
-                  h('span', { class: 'edge-line' }),
-                  h('span', { class: 'edge-label' }, edge.relation),
-                  h('span', { class: 'edge-line' })
+
+        // Content Area
+        h(
+          "div",
+          { class: ["quicksearch-content", { "no-tabs": !showTabs.value }] },
+          [
+            // Facts (always show if no tabs, or when facts tab is active)
+            (!showTabs.value || activeTab.value === "facts") &&
+              h("div", { class: "facts-panel" }, [
+                !showTabs.value &&
+                  h("div", { class: "panel-header" }, [
+                    h("span", { class: "panel-title" }, "搜索结果"),
+                    h(
+                      "span",
+                      { class: "panel-count" },
+                      `Gesamt: ${props.result.facts.length}`
+                    ),
+                  ]),
+                props.result.facts.length > 0
+                  ? h(
+                      "div",
+                      { class: "facts-list" },
+                      (expandedFacts.value
+                        ? props.result.facts
+                        : props.result.facts.slice(0, INITIAL_SHOW_COUNT)
+                      ).map((fact, i) =>
+                        h("div", { class: "fact-item", key: i }, [
+                          h("span", { class: "fact-number" }, i + 1),
+                          h("div", { class: "fact-content" }, fact),
+                        ])
+                      )
+                    )
+                  : h("div", { class: "empty-state" }, "未找到相关结果"),
+                props.result.facts.length > INITIAL_SHOW_COUNT &&
+                  h(
+                    "button",
+                    {
+                      class: "expand-btn",
+                      onClick: () => {
+                        expandedEntities.value = !expandedEntities.value;
+                      },
+                    },
+                    expandedEntities.value
+                      ? "Einklappen ▲"
+                      : "Alle {{ props.result.entities.length }} anzeigen ▼"
+                  ),
+              ]),
+
+            // Edges Tab
+            activeTab.value === "edges" &&
+              hasEdges.value &&
+              h("div", { class: "edges-panel" }, [
+                h("div", { class: "panel-header" }, [
+                  h("span", { class: "panel-title" }, "相关关系"),
+                  h(
+                    "span",
+                    { class: "panel-count" },
+                    `共 ${props.result.edges.length} 条`
+                  ),
                 ]),
-                h('span', { class: 'edge-target' }, edge.target)
-              ])
-            )
-          )
-        ]),
-        
-        // Nodes Tab
-        activeTab.value === 'nodes' && hasNodes.value && h('div', { class: 'nodes-panel' }, [
-          h('div', { class: 'panel-header' }, [
-            h('span', { class: 'panel-title' }, '相关节点'),
-            h('span', { class: 'panel-count' }, `共 ${props.result.nodes.length} 个`)
-          ]),
-          h('div', { class: 'nodes-grid' },
-            props.result.nodes.map((node, i) => 
-              h('div', { class: 'node-tag', key: i }, [
-                h('span', { class: 'node-name' }, node.name),
-                node.type && h('span', { class: 'node-type' }, node.type)
-              ])
-            )
-          )
-        ])
-      ])
-    ])
-  }
-}
+                h(
+                  "div",
+                  { class: "edges-list" },
+                  props.result.edges.map((edge, i) =>
+                    h("div", { class: "edge-item", key: i }, [
+                      h("span", { class: "edge-source" }, edge.source),
+                      h("span", { class: "edge-arrow" }, [
+                        h("span", { class: "edge-line" }),
+                        h("span", { class: "edge-label" }, edge.relation),
+                        h("span", { class: "edge-line" }),
+                      ]),
+                      h("span", { class: "edge-target" }, edge.target),
+                    ])
+                  )
+                ),
+              ]),
+
+            // Nodes Tab
+            activeTab.value === "nodes" &&
+              hasNodes.value &&
+              h("div", { class: "nodes-panel" }, [
+                h("div", { class: "panel-header" }, [
+                  h("span", { class: "panel-title" }, "相关节点"),
+                  h(
+                    "span",
+                    { class: "panel-count" },
+                    `共 ${props.result.nodes.length} 个`
+                  ),
+                ]),
+                h(
+                  "div",
+                  { class: "nodes-grid" },
+                  props.result.nodes.map((node, i) =>
+                    h("div", { class: "node-tag", key: i }, [
+                      h("span", { class: "node-name" }, node.name),
+                      node.type && h("span", { class: "node-type" }, node.type),
+                    ])
+                  )
+                ),
+              ]),
+          ]
+        ),
+      ]);
+  },
+};
 
 // Computed
 const statusClass = computed(() => {
-  if (isComplete.value) return 'completed'
-  if (agentLogs.value.length > 0) return 'processing'
-  return 'pending'
-})
+  if (isComplete.value) {
+    return "completed";
+  }
+  if (agentLogs.value.length > 0) {
+    return "processing";
+  }
+  return "pending";
+});
 
 const statusText = computed(() => {
-  if (isComplete.value) return 'Completed'
-  if (agentLogs.value.length > 0) return 'Generating...'
-  return 'Waiting'
-})
+  if (isComplete.value) {
+    return "Completed";
+  }
+  if (agentLogs.value.length > 0) {
+    return "Generating...";
+  }
+  return "Waiting";
+});
 
 const totalSections = computed(() => {
-  return reportOutline.value?.sections?.length || 0
-})
+  return reportOutline.value?.sections?.length || 0;
+});
 
 const completedSections = computed(() => {
-  return Object.keys(generatedSections.value).length
-})
+  return Object.keys(generatedSections.value).length;
+});
 
 const progressPercent = computed(() => {
-  if (totalSections.value === 0) return 0
-  return Math.round((completedSections.value / totalSections.value) * 100)
-})
+  if (totalSections.value === 0) {
+    return 0;
+  }
+  return Math.round((completedSections.value / totalSections.value) * 100);
+});
 
 const totalToolCalls = computed(() => {
-  return agentLogs.value.filter(l => l.action === 'tool_call').length
-})
+  return agentLogs.value.filter((l) => l.action === "tool_call").length;
+});
 
 const formatElapsedTime = computed(() => {
-  if (!startTime.value) return '0s'
-  const lastLog = agentLogs.value[agentLogs.value.length - 1]
-  const elapsed = lastLog?.elapsed_seconds || 0
-  if (elapsed < 60) return `${Math.round(elapsed)}s`
-  const mins = Math.floor(elapsed / 60)
-  const secs = Math.round(elapsed % 60)
-  return `${mins}m ${secs}s`
-})
+  if (!startTime.value) {
+    return "0s";
+  }
+  const lastLog = agentLogs.value[agentLogs.value.length - 1];
+  const elapsed = lastLog?.elapsed_seconds || 0;
+  if (elapsed < 60) {
+    return `${Math.round(elapsed)}s`;
+  }
+  const mins = Math.floor(elapsed / 60);
+  const secs = Math.round(elapsed % 60);
+  return `${mins}m ${secs}s`;
+});
 
 const displayLogs = computed(() => {
-  return agentLogs.value
-})
+  return agentLogs.value;
+});
 
 // Workflow steps overview (status-based, no nested cards)
 const activeSectionIndex = computed(() => {
-  if (isComplete.value) return null
-  if (currentSectionIndex.value) return currentSectionIndex.value
-  if (totalSections.value > 0 && completedSections.value < totalSections.value) return completedSections.value + 1
-  return null
-})
+  if (isComplete.value) {
+    return null;
+  }
+  if (currentSectionIndex.value) {
+    return currentSectionIndex.value;
+  }
+  if (
+    totalSections.value > 0 &&
+    completedSections.value < totalSections.value
+  ) {
+    return completedSections.value + 1;
+  }
+  return null;
+});
 
 const isPlanningDone = computed(() => {
-  return !!reportOutline.value?.sections?.length || agentLogs.value.some(l => l.action === 'planning_complete')
-})
+  return (
+    !!reportOutline.value?.sections?.length ||
+    agentLogs.value.some((l) => l.action === "planning_complete")
+  );
+});
 
 const isPlanningStarted = computed(() => {
-  return agentLogs.value.some(l => l.action === 'planning_start' || l.action === 'report_start')
-})
+  return agentLogs.value.some(
+    (l) => l.action === "planning_start" || l.action === "report_start"
+  );
+});
 
 const isFinalizing = computed(() => {
-  return !isComplete.value && isPlanningDone.value && totalSections.value > 0 && completedSections.value >= totalSections.value
-})
+  return (
+    !isComplete.value &&
+    isPlanningDone.value &&
+    totalSections.value > 0 &&
+    completedSections.value >= totalSections.value
+  );
+});
 
 // 当前活跃的步骤（用于顶部显示）
 const activeStep = computed(() => {
-  const steps = workflowSteps.value
+  const steps = workflowSteps.value;
   // 找到当前 active 的步骤
-  const active = steps.find(s => s.status === 'active')
-  if (active) return active
-  
+  const active = steps.find((s) => s.status === "active");
+  if (active) {
+    return active;
+  }
+
   // 如果没有 active，返回最后一个 done 的步骤
-  const doneSteps = steps.filter(s => s.status === 'done')
-  if (doneSteps.length > 0) return doneSteps[doneSteps.length - 1]
-  
+  const doneSteps = steps.filter((s) => s.status === "done");
+  if (doneSteps.length > 0) {
+    return doneSteps[doneSteps.length - 1];
+  }
+
   // 否则返回第一个步骤
-  return steps[0] || { noLabel: '--', title: '等待开始', status: 'todo', meta: '' }
-})
+  return (
+    steps[0] || { noLabel: "--", title: "等待开始", status: "todo", meta: "" }
+  );
+});
 
 const workflowSteps = computed(() => {
-  const steps = []
+  const steps = [];
 
   // Planning / Outline
-  const planningStatus = isPlanningDone.value ? 'done' : (isPlanningStarted.value ? 'active' : 'todo')
+  const planningStatus = isPlanningDone.value
+    ? "done"
+    : isPlanningStarted.value
+      ? "active"
+      : "todo";
   steps.push({
-    key: 'planning',
-    noLabel: 'PL',
-    title: 'Planning / Outline',
+    key: "planning",
+    noLabel: "PL",
+    title: "Planning / Outline",
     status: planningStatus,
-    meta: planningStatus === 'active' ? 'IN PROGRESS' : ''
-  })
+    meta: planningStatus === "active" ? "IN PROGRESS" : "",
+  });
 
   // Sections (if outline exists)
-  const sections = reportOutline.value?.sections || []
+  const sections = reportOutline.value?.sections || [];
   sections.forEach((section, i) => {
-    const idx = i + 1
-    const status = (isComplete.value || !!generatedSections.value[idx])
-      ? 'done'
-      : (activeSectionIndex.value === idx ? 'active' : 'todo')
+    const idx = i + 1;
+    const status =
+      isComplete.value || !!generatedSections.value[idx]
+        ? "done"
+        : activeSectionIndex.value === idx
+          ? "active"
+          : "todo";
 
     steps.push({
       key: `section-${idx}`,
-      noLabel: String(idx).padStart(2, '0'),
+      noLabel: String(idx).padStart(2, "0"),
       title: section.title,
       status,
-      meta: status === 'active' ? 'IN PROGRESS' : ''
-    })
-  })
+      meta: status === "active" ? "IN PROGRESS" : "",
+    });
+  });
 
   // Complete
-  const completeStatus = isComplete.value ? 'done' : (isFinalizing.value ? 'active' : 'todo')
+  const completeStatus = isComplete.value
+    ? "done"
+    : isFinalizing.value
+      ? "active"
+      : "todo";
   steps.push({
-    key: 'complete',
-    noLabel: 'OK',
-    title: 'Complete',
+    key: "complete",
+    noLabel: "OK",
+    title: "Complete",
     status: completeStatus,
-    meta: completeStatus === 'active' ? 'FINALIZING' : ''
-  })
+    meta: completeStatus === "active" ? "FINALIZING" : "",
+  });
 
-  return steps
-})
+  return steps;
+});
 
 // Methods
 const addLog = (msg) => {
-  emit('add-log', msg)
-}
+  emit("add-log", msg);
+};
 
 const isSectionCompleted = (sectionIndex) => {
-  return !!generatedSections.value[sectionIndex]
-}
+  return !!generatedSections.value[sectionIndex];
+};
 
 const formatTime = (timestamp) => {
-  if (!timestamp) return ''
-  try {
-    return new Date(timestamp).toLocaleTimeString('en-US', { 
-      hour12: false, 
-      hour: '2-digit', 
-      minute: '2-digit', 
-      second: '2-digit' 
-    })
-  } catch {
-    return ''
+  if (!timestamp) {
+    return "";
   }
-}
+  try {
+    return new Date(timestamp).toLocaleTimeString("en-US", {
+      hour12: false,
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+    });
+  } catch {
+    return "";
+  }
+};
 
 const formatParams = (params) => {
-  if (!params) return ''
-  try {
-    return JSON.stringify(params, null, 2)
-  } catch {
-    return String(params)
+  if (!params) {
+    return "";
   }
-}
+  try {
+    return JSON.stringify(params, null, 2);
+  } catch {
+    return String(params);
+  }
+};
 
 const formatResultSize = (length) => {
-  if (!length) return ''
-  if (length < 1000) return `${length} chars`
-  return `${(length / 1000).toFixed(1)}k chars`
-}
+  if (!length) {
+    return "";
+  }
+  if (length < 1000) {
+    return `${length} chars`;
+  }
+  return `${(length / 1000).toFixed(1)}k chars`;
+};
 
 const truncateText = (text, maxLen) => {
-  if (!text) return ''
-  if (text.length <= maxLen) return text
-  return text.substring(0, maxLen) + '...'
-}
+  if (!text) {
+    return "";
+  }
+  if (text.length <= maxLen) {
+    return text;
+  }
+  return text.substring(0, maxLen) + "...";
+};
 
 const renderMarkdown = (content) => {
-  if (!content) return ''
-  
+  if (!content) {
+    return "";
+  }
+
   // 去掉开头的二级标题（## xxx），因为章节标题已在外层显示
-  let processedContent = content.replace(/^##\s+.+\n+/, '')
-  
+  let processedContent = content.replace(/^##\s+.+\n+/, "");
+
   // 处理代码块
-  let html = processedContent.replace(/```(\w*)\n([\s\S]*?)```/g, '<pre class="code-block"><code>$2</code></pre>')
-  
+  let html = processedContent.replace(
+    /```(\w*)\n([\s\S]*?)```/g,
+    '<pre class="code-block"><code>$2</code></pre>'
+  );
+
   // 处理行内代码
-  html = html.replace(/`([^`]+)`/g, '<code class="inline-code">$1</code>')
-  
+  html = html.replace(/`([^`]+)`/g, '<code class="inline-code">$1</code>');
+
   // 处理标题
-  html = html.replace(/^#### (.+)$/gm, '<h5 class="md-h5">$1</h5>')
-  html = html.replace(/^### (.+)$/gm, '<h4 class="md-h4">$1</h4>')
-  html = html.replace(/^## (.+)$/gm, '<h3 class="md-h3">$1</h3>')
-  html = html.replace(/^# (.+)$/gm, '<h2 class="md-h2">$1</h2>')
-  
+  html = html.replace(/^#### (.+)$/gm, '<h5 class="md-h5">$1</h5>');
+  html = html.replace(/^### (.+)$/gm, '<h4 class="md-h4">$1</h4>');
+  html = html.replace(/^## (.+)$/gm, '<h3 class="md-h3">$1</h3>');
+  html = html.replace(/^# (.+)$/gm, '<h2 class="md-h2">$1</h2>');
+
   // 处理引用块
-  html = html.replace(/^> (.+)$/gm, '<blockquote class="md-quote">$1</blockquote>')
-  
+  html = html.replace(
+    /^> (.+)$/gm,
+    '<blockquote class="md-quote">$1</blockquote>'
+  );
+
   // 处理列表 - 支持子列表
   html = html.replace(/^(\s*)- (.+)$/gm, (match, indent, text) => {
-    const level = Math.floor(indent.length / 2)
-    return `<li class="md-li" data-level="${level}">${text}</li>`
-  })
+    const level = Math.floor(indent.length / 2);
+    return `<li class="md-li" data-level="${level}">${text}</li>`;
+  });
   html = html.replace(/^(\s*)(\d+)\. (.+)$/gm, (match, indent, num, text) => {
-    const level = Math.floor(indent.length / 2)
-    return `<li class="md-oli" data-level="${level}">${text}</li>`
-  })
+    const level = Math.floor(indent.length / 2);
+    return `<li class="md-oli" data-level="${level}">${text}</li>`;
+  });
 
   // 包装无序列表
-  html = html.replace(/(<li class="md-li"[^>]*>.*?<\/li>\s*)+/g, '<ul class="md-ul">$&</ul>')
+  html = html.replace(
+    /(<li class="md-li"[^>]*>.*?<\/li>\s*)+/g,
+    '<ul class="md-ul">$&</ul>'
+  );
   // 包装有序列表
-  html = html.replace(/(<li class="md-oli"[^>]*>.*?<\/li>\s*)+/g, '<ol class="md-ol">$&</ol>')
+  html = html.replace(
+    /(<li class="md-oli"[^>]*>.*?<\/li>\s*)+/g,
+    '<ol class="md-ol">$&</ol>'
+  );
 
   // 清理列表项之间的所有空白
-  html = html.replace(/<\/li>\s+<li/g, '</li><li')
+  html = html.replace(/<\/li>\s+<li/g, "</li><li");
   // 清理列表开始标签后的空白
-  html = html.replace(/<ul class="md-ul">\s+/g, '<ul class="md-ul">')
-  html = html.replace(/<ol class="md-ol">\s+/g, '<ol class="md-ol">')
+  html = html.replace(/<ul class="md-ul">\s+/g, '<ul class="md-ul">');
+  html = html.replace(/<ol class="md-ol">\s+/g, '<ol class="md-ol">');
   // 清理列表结束标签前的空白
-  html = html.replace(/\s+<\/ul>/g, '</ul>')
-  html = html.replace(/\s+<\/ol>/g, '</ol>')
-  
+  html = html.replace(/\s+<\/ul>/g, "</ul>");
+  html = html.replace(/\s+<\/ol>/g, "</ol>");
+
   // 处理粗体和斜体
-  html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-  html = html.replace(/\*(.+?)\*/g, '<em>$1</em>')
-  html = html.replace(/_(.+?)_/g, '<em>$1</em>')
-  
+  html = html.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
+  html = html.replace(/\*(.+?)\*/g, "<em>$1</em>");
+  html = html.replace(/_(.+?)_/g, "<em>$1</em>");
+
   // 处理分隔线
-  html = html.replace(/^---$/gm, '<hr class="md-hr">')
-  
+  html = html.replace(/^---$/gm, '<hr class="md-hr">');
+
   // 处理换行 - 空行变成段落分隔，单换行变成 <br>
-  html = html.replace(/\n\n/g, '</p><p class="md-p">')
-  html = html.replace(/\n/g, '<br>')
-  
+  html = html.replace(/\n\n/g, '</p><p class="md-p">');
+  html = html.replace(/\n/g, "<br>");
+
   // 包装在段落中
-  html = '<p class="md-p">' + html + '</p>'
-  
+  html = '<p class="md-p">' + html + "</p>";
+
   // 清理空段落
-  html = html.replace(/<p class="md-p"><\/p>/g, '')
-  html = html.replace(/<p class="md-p">(<h[2-5])/g, '$1')
-  html = html.replace(/(<\/h[2-5]>)<\/p>/g, '$1')
-  html = html.replace(/<p class="md-p">(<ul|<ol|<blockquote|<pre|<hr)/g, '$1')
-  html = html.replace(/(<\/ul>|<\/ol>|<\/blockquote>|<\/pre>)<\/p>/g, '$1')
+  html = html.replace(/<p class="md-p"><\/p>/g, "");
+  html = html.replace(/<p class="md-p">(<h[2-5])/g, "$1");
+  html = html.replace(/(<\/h[2-5]>)<\/p>/g, "$1");
+  html = html.replace(/<p class="md-p">(<ul|<ol|<blockquote|<pre|<hr)/g, "$1");
+  html = html.replace(/(<\/ul>|<\/ol>|<\/blockquote>|<\/pre>)<\/p>/g, "$1");
   // 清理块级元素前后的 <br> 标签
-  html = html.replace(/<br>\s*(<ul|<ol|<blockquote)/g, '$1')
-  html = html.replace(/(<\/ul>|<\/ol>|<\/blockquote>)\s*<br>/g, '$1')
+  html = html.replace(/<br>\s*(<ul|<ol|<blockquote)/g, "$1");
+  html = html.replace(/(<\/ul>|<\/ol>|<\/blockquote>)\s*<br>/g, "$1");
   // 清理 <p><br> 紧跟块级元素的情况（多余空行导致）
-  html = html.replace(/<p class="md-p">(<br>\s*)+(<ul|<ol|<blockquote|<pre|<hr)/g, '$2')
+  html = html.replace(
+    /<p class="md-p">(<br>\s*)+(<ul|<ol|<blockquote|<pre|<hr)/g,
+    "$2"
+  );
   // 清理连续的 <br> 标签
-  html = html.replace(/(<br>\s*){2,}/g, '<br>')
+  html = html.replace(/(<br>\s*){2,}/g, "<br>");
   // 清理块级元素后紧跟的段落开始标签前的 <br>
-  html = html.replace(/(<\/ol>|<\/ul>|<\/blockquote>)<br>(<p|<div)/g, '$1$2')
+  html = html.replace(/(<\/ol>|<\/ul>|<\/blockquote>)<br>(<p|<div)/g, "$1$2");
 
   // 修复非连续有序列表的编号：当单项 <ol> 被段落内容隔开时，保持编号递增
-  const tokens = html.split(/(<ol class="md-ol">(?:<li class="md-oli"[^>]*>[\s\S]*?<\/li>)+<\/ol>)/g)
-  let olCounter = 0
-  let inSequence = false
+  const tokens = html.split(
+    /(<ol class="md-ol">(?:<li class="md-oli"[^>]*>[\s\S]*?<\/li>)+<\/ol>)/g
+  );
+  let olCounter = 0;
+  let inSequence = false;
   for (let i = 0; i < tokens.length; i++) {
     if (tokens[i].startsWith('<ol class="md-ol">')) {
-      const liCount = (tokens[i].match(/<li class="md-oli"/g) || []).length
+      const liCount = (tokens[i].match(/<li class="md-oli"/g) || []).length;
       if (liCount === 1) {
-        olCounter++
+        olCounter++;
         if (olCounter > 1) {
-          tokens[i] = tokens[i].replace('<ol class="md-ol">', `<ol class="md-ol" start="${olCounter}">`)
+          tokens[i] = tokens[i].replace(
+            '<ol class="md-ol">',
+            `<ol class="md-ol" start="${olCounter}">`
+          );
         }
-        inSequence = true
+        inSequence = true;
       } else {
-        olCounter = 0
-        inSequence = false
+        olCounter = 0;
+        inSequence = false;
       }
-    } else if (inSequence) {
-      if (/<h[2-5]/.test(tokens[i])) {
-        olCounter = 0
-        inSequence = false
-      }
+    } else if (inSequence && /<h[2-5]/.test(tokens[i])) {
+      olCounter = 0;
+      inSequence = false;
     }
   }
-  html = tokens.join('')
+  html = tokens.join("");
 
-  return html
-}
+  return html;
+};
 
 const getTimelineItemClass = (log, idx, total) => {
-  const isLatest = idx === total - 1 && !isComplete.value
-  const isMilestone = log.action === 'section_complete' || log.action === 'report_complete'
+  const isLatest = idx === total - 1 && !isComplete.value;
+  const isMilestone =
+    log.action === "section_complete" || log.action === "report_complete";
   return {
-    'node--active': isLatest,
-    'node--done': !isLatest && isMilestone,
-    'node--muted': !isLatest && !isMilestone,
-    'node--tool': log.action === 'tool_call' || log.action === 'tool_result'
-  }
-}
+    "node--active": isLatest,
+    "node--done": !isLatest && isMilestone,
+    "node--muted": !(isLatest || isMilestone),
+    "node--tool": log.action === "tool_call" || log.action === "tool_result",
+  };
+};
 
 const getConnectorClass = (log, idx, total) => {
-  const isLatest = idx === total - 1 && !isComplete.value
-  if (isLatest) return 'dot-active'
-  if (log.action === 'section_complete' || log.action === 'report_complete') return 'dot-done'
-  return 'dot-muted'
-}
+  const isLatest = idx === total - 1 && !isComplete.value;
+  if (isLatest) {
+    return "dot-active";
+  }
+  if (log.action === "section_complete" || log.action === "report_complete") {
+    return "dot-done";
+  }
+  return "dot-muted";
+};
 
 const getActionLabel = (action) => {
   const labels = {
-    'report_start': 'Report Started',
-    'planning_start': 'Planning',
-    'planning_complete': 'Plan Complete',
-    'section_start': 'Section Start',
-    'section_content': 'Content Ready',
-    'section_complete': 'Section Done',
-    'tool_call': 'Tool Call',
-    'tool_result': 'Tool Result',
-    'llm_response': 'LLM Response',
-    'report_complete': 'Complete'
-  }
-  return labels[action] || action
-}
+    report_start: "Report Started",
+    planning_start: "Planning",
+    planning_complete: "Plan Complete",
+    section_start: "Section Start",
+    section_content: "Content Ready",
+    section_complete: "Section Done",
+    tool_call: "Tool Call",
+    tool_result: "Tool Result",
+    llm_response: "LLM Response",
+    report_complete: "Complete",
+  };
+  return labels[action] || action;
+};
 
 const getLogLevelClass = (log) => {
-  if (log.includes('ERROR') || log.includes('错误')) return 'error'
-  if (log.includes('WARNING') || log.includes('警告')) return 'warning'
+  if (log.includes("ERROR") || log.includes("错误")) {
+    return "error";
+  }
+  if (log.includes("WARNING") || log.includes("警告")) {
+    return "warning";
+  }
   // INFO 使用默认颜色，不标记为 success
-  return ''
-}
+  return "";
+};
 
 // Polling
-let agentLogTimer = null
-let consoleLogTimer = null
+let agentLogTimer = null;
+let consoleLogTimer = null;
 
 const fetchAgentLog = async () => {
-  if (!props.reportId) return
-  
+  if (!props.reportId) {
+    return;
+  }
+
   try {
-    const res = await getAgentLog(props.reportId, agentLogLine.value)
-    
+    const res = await getAgentLog(props.reportId, agentLogLine.value);
+
     if (res.success && res.data) {
-      const newLogs = res.data.logs || []
-      
+      const newLogs = res.data.logs || [];
+
       if (newLogs.length > 0) {
-        newLogs.forEach(log => {
-          agentLogs.value.push(log)
-          
-          if (log.action === 'planning_complete' && log.details?.outline) {
-            reportOutline.value = log.details.outline
+        newLogs.forEach((log) => {
+          agentLogs.value.push(log);
+
+          if (log.action === "planning_complete" && log.details?.outline) {
+            reportOutline.value = log.details.outline;
           }
-          
-          if (log.action === 'section_start') {
-            currentSectionIndex.value = log.section_index
+
+          if (log.action === "section_start") {
+            currentSectionIndex.value = log.section_index;
           }
 
           // section_complete - 章节生成完成
-          if (log.action === 'section_complete') {
-            if (log.details?.content) {
-              generatedSections.value[log.section_index] = log.details.content
-              // 自动展开刚生成的章节
-              expandedContent.value.add(log.section_index - 1)
-              currentSectionIndex.value = null
-            }
+          if (log.action === "section_complete" && log.details?.content) {
+            generatedSections.value[log.section_index] = log.details.content;
+            // 自动展开刚生成的章节
+            expandedContent.value.add(log.section_index - 1);
+            currentSectionIndex.value = null;
           }
-          
-          if (log.action === 'report_complete') {
-            isComplete.value = true
-            currentSectionIndex.value = null  // 确保清除 loading 状态
-            emit('update-status', 'completed')
-            stopPolling()
+
+          if (log.action === "report_complete") {
+            isComplete.value = true;
+            currentSectionIndex.value = null; // 确保清除 loading 状态
+            emit("update-status", "completed");
+            stopPolling();
             // 滚动逻辑统一在循环结束后的 nextTick 中处理
           }
-          
-          if (log.action === 'report_start') {
-            startTime.value = new Date(log.timestamp)
+
+          if (log.action === "report_start") {
+            startTime.value = new Date(log.timestamp);
           }
-        })
-        
-        agentLogLine.value = res.data.from_line + newLogs.length
-        
+        });
+
+        agentLogLine.value = res.data.from_line + newLogs.length;
+
         nextTick(() => {
           if (rightPanel.value) {
             // 如果任务已完成，滚动到顶部；否则滚动到底部跟随最新日志
             if (isComplete.value) {
-              rightPanel.value.scrollTop = 0
+              rightPanel.value.scrollTop = 0;
             } else {
-              rightPanel.value.scrollTop = rightPanel.value.scrollHeight
+              rightPanel.value.scrollTop = rightPanel.value.scrollHeight;
             }
           }
-        })
+        });
       }
     }
   } catch (err) {
-    console.warn('Failed to fetch agent log:', err)
+    console.warn("Failed to fetch agent log:", err);
   }
-}
+};
 
 // 提取最终答案内容 - 从 LLM response 中提取章节内容
 const extractFinalContent = (response) => {
-  if (!response) return null
-  
-  // 尝试提取 <final_answer> 标签内的内容
-  const finalAnswerTagMatch = response.match(/<final_answer>([\s\S]*?)<\/final_answer>/)
-  if (finalAnswerTagMatch) {
-    return finalAnswerTagMatch[1].trim()
+  if (!response) {
+    return null;
   }
-  
+
+  // 尝试提取 <final_answer> 标签内的内容
+  const finalAnswerTagMatch = response.match(
+    /<final_answer>([\s\S]*?)<\/final_answer>/
+  );
+  if (finalAnswerTagMatch) {
+    return finalAnswerTagMatch[1].trim();
+  }
+
   // 尝试找 Final Answer: 后面的内容（支持多种格式）
   // 格式1: Final Answer:\n\n内容
   // 格式2: Final Answer: 内容
-  const finalAnswerMatch = response.match(/Final\s*Answer:\s*\n*([\s\S]*)$/i)
+  const finalAnswerMatch = response.match(/Final\s*Answer:\s*\n*([\s\S]*)$/i);
   if (finalAnswerMatch) {
-    return finalAnswerMatch[1].trim()
+    return finalAnswerMatch[1].trim();
   }
-  
+
   // 尝试找 最终答案: 后面的内容
-  const chineseFinalMatch = response.match(/最终答案[:：]\s*\n*([\s\S]*)$/i)
+  const chineseFinalMatch = response.match(/最终答案[:：]\s*\n*([\s\S]*)$/i);
   if (chineseFinalMatch) {
-    return chineseFinalMatch[1].trim()
+    return chineseFinalMatch[1].trim();
   }
-  
+
   // 如果以 ## 或 # 或 > 开头，可能是直接的 markdown 内容
-  const trimmedResponse = response.trim()
+  const trimmedResponse = response.trim();
   if (trimmedResponse.match(/^[#>]/)) {
-    return trimmedResponse
+    return trimmedResponse;
   }
-  
+
   // 如果内容较长且包含markdown格式，尝试移除思考过程后返回
-  if (response.length > 300 && (response.includes('**') || response.includes('>'))) {
+  if (
+    response.length > 300 &&
+    (response.includes("**") || response.includes(">"))
+  ) {
     // 移除 Thought: 开头的思考过程
-    const thoughtMatch = response.match(/^Thought:[\s\S]*?(?=\n\n[^T]|\n\n$)/i)
+    const thoughtMatch = response.match(/^Thought:[\s\S]*?(?=\n\n[^T]|\n\n$)/i);
     if (thoughtMatch) {
-      const afterThought = response.substring(thoughtMatch[0].length).trim()
+      const afterThought = response.substring(thoughtMatch[0].length).trim();
       if (afterThought.length > 100) {
-        return afterThought
+        return afterThought;
       }
     }
   }
-  
-  return null
-}
+
+  return null;
+};
 
 const fetchConsoleLog = async () => {
-  if (!props.reportId) return
-  
+  if (!props.reportId) {
+    return;
+  }
+
   try {
-    const res = await getConsoleLog(props.reportId, consoleLogLine.value)
-    
+    const res = await getConsoleLog(props.reportId, consoleLogLine.value);
+
     if (res.success && res.data) {
-      const newLogs = res.data.logs || []
-      
+      const newLogs = res.data.logs || [];
+
       if (newLogs.length > 0) {
-        consoleLogs.value.push(...newLogs)
-        consoleLogLine.value = res.data.from_line + newLogs.length
-        
+        consoleLogs.value.push(...newLogs);
+        consoleLogLine.value = res.data.from_line + newLogs.length;
+
         nextTick(() => {
           if (logContent.value) {
-            logContent.value.scrollTop = logContent.value.scrollHeight
+            logContent.value.scrollTop = logContent.value.scrollHeight;
           }
-        })
+        });
       }
     }
   } catch (err) {
-    console.warn('Failed to fetch console log:', err)
+    console.warn("Failed to fetch console log:", err);
   }
-}
+};
 
 const startPolling = () => {
-  if (agentLogTimer || consoleLogTimer) return
-  
-  fetchAgentLog()
-  fetchConsoleLog()
-  
-  agentLogTimer = setInterval(fetchAgentLog, 2000)
-  consoleLogTimer = setInterval(fetchConsoleLog, 1500)
-}
+  if (agentLogTimer || consoleLogTimer) {
+    return;
+  }
+
+  fetchAgentLog();
+  fetchConsoleLog();
+
+  agentLogTimer = setInterval(fetchAgentLog, 2000);
+  consoleLogTimer = setInterval(fetchConsoleLog, 1500);
+};
 
 const stopPolling = () => {
   if (agentLogTimer) {
-    clearInterval(agentLogTimer)
-    agentLogTimer = null
+    clearInterval(agentLogTimer);
+    agentLogTimer = null;
   }
   if (consoleLogTimer) {
-    clearInterval(consoleLogTimer)
-    consoleLogTimer = null
+    clearInterval(consoleLogTimer);
+    consoleLogTimer = null;
   }
-}
+};
 
 // Lifecycle
 onMounted(() => {
   if (props.reportId) {
-    addLog(`Report Agent initialized: ${props.reportId}`)
-    startPolling()
+    addLog(`Report Agent initialized: ${props.reportId}`);
+    startPolling();
   }
-})
+});
 
 onUnmounted(() => {
-  stopPolling()
-})
+  stopPolling();
+});
 
-watch(() => props.reportId, (newId) => {
-  if (newId) {
-    agentLogs.value = []
-    consoleLogs.value = []
-    agentLogLine.value = 0
-    consoleLogLine.value = 0
-    reportOutline.value = null
-    currentSectionIndex.value = null
-    generatedSections.value = {}
-    expandedContent.value = new Set()
-    expandedLogs.value = new Set()
-    collapsedSections.value = new Set()
-    isComplete.value = false
-    startTime.value = null
-    
-    startPolling()
-  }
-}, { immediate: true })
+watch(
+  () => props.reportId,
+  (newId) => {
+    if (newId) {
+      agentLogs.value = [];
+      consoleLogs.value = [];
+      agentLogLine.value = 0;
+      consoleLogLine.value = 0;
+      reportOutline.value = null;
+      currentSectionIndex.value = null;
+      generatedSections.value = {};
+      expandedContent.value = new Set();
+      expandedLogs.value = new Set();
+      collapsedSections.value = new Set();
+      isComplete.value = false;
+      startTime.value = null;
+
+      startPolling();
+    }
+  },
+  { immediate: true }
+);
 </script>
 
 <style scoped>
@@ -2207,29 +3056,23 @@ watch(() => props.reportId, (newId) => {
   height: 100%;
   display: flex;
   flex-direction: column;
-  background: #F8F9FA;
-  font-family: 'Inter', 'Noto Sans SC', system-ui, sans-serif;
+  background: #0a0f1a;
+  font-family: 'Inter', sans-serif;
+  color: #e8f1f5;
   overflow: hidden;
 }
 
-/* Main Split Layout */
-.main-split-layout {
-  flex: 1;
-  display: flex;
-  overflow: hidden;
-}
-
-/* Panel Headers */
 .panel-header {
   display: flex;
   align-items: center;
   gap: 10px;
   padding: 14px 20px;
-  background: #FFFFFF;
-  border-bottom: 1px solid #E5E7EB;
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid rgba(125, 211, 192, 0.15);
   font-size: 13px;
   font-weight: 600;
-  color: #374151;
+  color: #e8f1f5;
   text-transform: uppercase;
   letter-spacing: 0.04em;
   position: sticky;
@@ -2241,8 +3084,8 @@ watch(() => props.reportId, (newId) => {
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: #1F2937;
-  box-shadow: 0 0 0 3px rgba(31, 41, 55, 0.15);
+  background: #7dd3c0;
+  box-shadow: 0 0 0 3px rgba(125, 211, 192, 0.2);
   margin-right: 10px;
   flex-shrink: 0;
   animation: pulse-dot 1.5s ease-in-out infinite;
@@ -2250,17 +3093,17 @@ watch(() => props.reportId, (newId) => {
 
 @keyframes pulse-dot {
   0%, 100% {
-    box-shadow: 0 0 0 3px rgba(31, 41, 55, 0.15);
+    box-shadow: 0 0 0 3px rgba(125, 211, 192, 0.2);
   }
   50% {
-    box-shadow: 0 0 0 5px rgba(31, 41, 55, 0.1);
+    box-shadow: 0 0 0 5px rgba(125, 211, 192, 0.1);
   }
 }
 
 .header-index {
   font-size: 12px;
   font-weight: 600;
-  color: #9CA3AF;
+  color: #8899a6;
   margin-right: 10px;
   flex-shrink: 0;
 }
@@ -2268,7 +3111,7 @@ watch(() => props.reportId, (newId) => {
 .header-title {
   font-size: 13px;
   font-weight: 600;
-  color: #374151;
+  color: #e8f1f5;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;

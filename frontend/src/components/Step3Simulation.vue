@@ -97,7 +97,7 @@
           @click="handleNextStep"
         >
           <span v-if="isGeneratingReport" class="loading-spinner-small"></span>
-          {{ isGeneratingReport ? '启动中...' : '开始生成结果报告' }} 
+          {{ isGeneratingReport ? 'Wird gestartet...' : 'Bericht generieren' }} 
           <span v-if="!isGeneratingReport" class="arrow-icon">→</span>
         </button>
       </div>
@@ -286,414 +286,453 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
-import { useRouter } from 'vue-router'
-import { 
-  startSimulation, 
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
+import { useRouter } from "vue-router";
+import { generateReport } from "../api/report";
+import {
+  getRunStatus,
+  getRunStatusDetail,
+  startSimulation,
   stopSimulation,
-  getRunStatus, 
-  getRunStatusDetail
-} from '../api/simulation'
-import { generateReport } from '../api/report'
+} from "../api/simulation";
 
 const props = defineProps({
   simulationId: String,
   maxRounds: Number, // 从Step2传入的最大轮数
   minutesPerRound: {
     type: Number,
-    default: 30 // 默认每轮30分钟
+    default: 30, // 默认每轮30分钟
   },
   projectData: Object,
   graphData: Object,
-  systemLogs: Array
-})
+  systemLogs: Array,
+});
 
-const emit = defineEmits(['go-back', 'next-step', 'add-log', 'update-status'])
+const emit = defineEmits(["go-back", "next-step", "add-log", "update-status"]);
 
-const router = useRouter()
+const router = useRouter();
 
 // State
-const isGeneratingReport = ref(false)
-const phase = ref(0) // 0: 未开始, 1: 运行中, 2: 已完成
-const isStarting = ref(false)
-const isStopping = ref(false)
-const startError = ref(null)
-const runStatus = ref({})
-const allActions = ref([]) // 所有动作（增量累积）
-const actionIds = ref(new Set()) // 用于去重的动作ID集合
-const scrollContainer = ref(null)
+const isGeneratingReport = ref(false);
+const phase = ref(0); // 0: 未开始, 1: 运行中, 2: 已完成
+const isStarting = ref(false);
+const isStopping = ref(false);
+const startError = ref(null);
+const runStatus = ref({});
+const allActions = ref([]); // 所有动作（增量累积）
+const actionIds = ref(new Set()); // 用于去重的动作ID集合
+const scrollContainer = ref(null);
 
 // Computed
 // 按时间顺序显示动作（最新的在最后面，即底部）
 const chronologicalActions = computed(() => {
-  return allActions.value
-})
+  return allActions.value;
+});
 
 // 各平台动作计数
 const twitterActionsCount = computed(() => {
-  return allActions.value.filter(a => a.platform === 'twitter').length
-})
+  return allActions.value.filter((a) => a.platform === "twitter").length;
+});
 
 const redditActionsCount = computed(() => {
-  return allActions.value.filter(a => a.platform === 'reddit').length
-})
+  return allActions.value.filter((a) => a.platform === "reddit").length;
+});
 
 // 格式化模拟流逝时间（根据轮次和每轮分钟数计算）
 const formatElapsedTime = (currentRound) => {
-  if (!currentRound || currentRound <= 0) return '0h 0m'
-  const totalMinutes = currentRound * props.minutesPerRound
-  const hours = Math.floor(totalMinutes / 60)
-  const minutes = totalMinutes % 60
-  return `${hours}h ${minutes}m`
-}
+  if (!currentRound || currentRound <= 0) {
+    return "0h 0m";
+  }
+  const totalMinutes = currentRound * props.minutesPerRound;
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  return `${hours}h ${minutes}m`;
+};
 
 // Twitter平台的模拟流逝时间
 const twitterElapsedTime = computed(() => {
-  return formatElapsedTime(runStatus.value.twitter_current_round || 0)
-})
+  return formatElapsedTime(runStatus.value.twitter_current_round || 0);
+});
 
 // Reddit平台的模拟流逝时间
 const redditElapsedTime = computed(() => {
-  return formatElapsedTime(runStatus.value.reddit_current_round || 0)
-})
+  return formatElapsedTime(runStatus.value.reddit_current_round || 0);
+});
 
 // Methods
 const addLog = (msg) => {
-  emit('add-log', msg)
-}
+  emit("add-log", msg);
+};
 
 // 重置所有状态（用于重新启动模拟）
 const resetAllState = () => {
-  phase.value = 0
-  runStatus.value = {}
-  allActions.value = []
-  actionIds.value = new Set()
-  prevTwitterRound.value = 0
-  prevRedditRound.value = 0
-  startError.value = null
-  isStarting.value = false
-  isStopping.value = false
-  stopPolling()  // 停止之前可能存在的轮询
-}
+  phase.value = 0;
+  runStatus.value = {};
+  allActions.value = [];
+  actionIds.value = new Set();
+  prevTwitterRound.value = 0;
+  prevRedditRound.value = 0;
+  startError.value = null;
+  isStarting.value = false;
+  isStopping.value = false;
+  stopPolling(); // 停止之前可能存在的轮询
+};
 
 // 启动模拟
 const doStartSimulation = async () => {
   if (!props.simulationId) {
-    addLog('错误：缺少 simulationId')
-    return
+    addLog("错误：缺少 simulationId");
+    return;
   }
-  
+
   // 先重置所有状态，确保不会受到上一次模拟的影响
-  resetAllState()
-  
-  isStarting.value = true
-  startError.value = null
-  addLog('正在启动双平台并行模拟...')
-  emit('update-status', 'processing')
-  
+  resetAllState();
+
+  isStarting.value = true;
+  startError.value = null;
+  addLog("正在启动双平台并行模拟...");
+  emit("update-status", "processing");
+
   try {
     const params = {
       simulation_id: props.simulationId,
-      platform: 'parallel',
-      force: true,  // 强制重新开始
-      enable_graph_memory_update: true  // 开启动态图谱更新
-    }
-    
+      platform: "parallel",
+      force: true, // 强制重新开始
+      enable_graph_memory_update: true, // 开启动态图谱更新
+    };
+
     if (props.maxRounds) {
-      params.max_rounds = props.maxRounds
-      addLog(`设置最大模拟轮数: ${props.maxRounds}`)
+      params.max_rounds = props.maxRounds;
+      addLog(`设置最大模拟轮数: ${props.maxRounds}`);
     }
-    
-    addLog('已开启动态图谱更新模式')
-    
-    const res = await startSimulation(params)
-    
+
+    addLog("已开启动态图谱更新模式");
+
+    const res = await startSimulation(params);
+
     if (res.success && res.data) {
       if (res.data.force_restarted) {
-        addLog('✓ 已清理旧的模拟日志，重新开始模拟')
+        addLog("✓ 已清理旧的模拟日志，重新开始模拟");
       }
-      addLog('✓ 模拟引擎启动成功')
-      addLog(`  ├─ PID: ${res.data.process_pid || '-'}`)
-      
-      phase.value = 1
-      runStatus.value = res.data
-      
-      startStatusPolling()
-      startDetailPolling()
+      addLog("✓ 模拟引擎启动成功");
+      addLog(`  ├─ PID: ${res.data.process_pid || "-"}`);
+
+      phase.value = 1;
+      runStatus.value = res.data;
+
+      startStatusPolling();
+      startDetailPolling();
     } else {
-      startError.value = res.error || '启动失败'
-      addLog(`✗ 启动失败: ${res.error || '未知错误'}`)
-      emit('update-status', 'error')
+      startError.value = res.error || "启动失败";
+      addLog(`✗ 启动失败: ${res.error || "未知错误"}`);
+      emit("update-status", "error");
     }
   } catch (err) {
-    startError.value = err.message
-    addLog(`✗ 启动异常: ${err.message}`)
-    emit('update-status', 'error')
+    startError.value = err.message;
+    addLog(`✗ 启动异常: ${err.message}`);
+    emit("update-status", "error");
   } finally {
-    isStarting.value = false
+    isStarting.value = false;
   }
-}
+};
 
 // 停止模拟
 const handleStopSimulation = async () => {
-  if (!props.simulationId) return
-  
-  isStopping.value = true
-  addLog('正在停止模拟...')
-  
+  if (!props.simulationId) {
+    return;
+  }
+
+  isStopping.value = true;
+  addLog("正在停止模拟...");
+
   try {
-    const res = await stopSimulation({ simulation_id: props.simulationId })
-    
+    const res = await stopSimulation({ simulation_id: props.simulationId });
+
     if (res.success) {
-      addLog('✓ 模拟已停止')
-      phase.value = 2
-      stopPolling()
-      emit('update-status', 'completed')
+      addLog("✓ 模拟已停止");
+      phase.value = 2;
+      stopPolling();
+      emit("update-status", "completed");
     } else {
-      addLog(`停止失败: ${res.error || '未知错误'}`)
+      addLog(`停止失败: ${res.error || "未知错误"}`);
     }
   } catch (err) {
-    addLog(`停止异常: ${err.message}`)
+    addLog(`停止异常: ${err.message}`);
   } finally {
-    isStopping.value = false
+    isStopping.value = false;
   }
-}
+};
 
 // 轮询状态
-let statusTimer = null
-let detailTimer = null
+let statusTimer = null;
+let detailTimer = null;
 
 const startStatusPolling = () => {
-  statusTimer = setInterval(fetchRunStatus, 2000)
-}
+  statusTimer = setInterval(fetchRunStatus, 2000);
+};
 
 const startDetailPolling = () => {
-  detailTimer = setInterval(fetchRunStatusDetail, 3000)
-}
+  detailTimer = setInterval(fetchRunStatusDetail, 3000);
+};
 
 const stopPolling = () => {
   if (statusTimer) {
-    clearInterval(statusTimer)
-    statusTimer = null
+    clearInterval(statusTimer);
+    statusTimer = null;
   }
   if (detailTimer) {
-    clearInterval(detailTimer)
-    detailTimer = null
+    clearInterval(detailTimer);
+    detailTimer = null;
   }
-}
+};
 
 // 追踪各平台的上一次轮次，用于检测变化并输出日志
-const prevTwitterRound = ref(0)
-const prevRedditRound = ref(0)
+const prevTwitterRound = ref(0);
+const prevRedditRound = ref(0);
 
 const fetchRunStatus = async () => {
-  if (!props.simulationId) return
-  
+  if (!props.simulationId) {
+    return;
+  }
+
   try {
-    const res = await getRunStatus(props.simulationId)
-    
+    const res = await getRunStatus(props.simulationId);
+
     if (res.success && res.data) {
-      const data = res.data
-      
-      runStatus.value = data
-      
+      const data = res.data;
+
+      runStatus.value = data;
+
       // 分别检测各平台的轮次变化并输出日志
       if (data.twitter_current_round > prevTwitterRound.value) {
-        addLog(`[Plaza] R${data.twitter_current_round}/${data.total_rounds} | T:${data.twitter_simulated_hours || 0}h | A:${data.twitter_actions_count}`)
-        prevTwitterRound.value = data.twitter_current_round
+        addLog(
+          `[Plaza] R${data.twitter_current_round}/${data.total_rounds} | T:${data.twitter_simulated_hours || 0}h | A:${data.twitter_actions_count}`
+        );
+        prevTwitterRound.value = data.twitter_current_round;
       }
-      
+
       if (data.reddit_current_round > prevRedditRound.value) {
-        addLog(`[Community] R${data.reddit_current_round}/${data.total_rounds} | T:${data.reddit_simulated_hours || 0}h | A:${data.reddit_actions_count}`)
-        prevRedditRound.value = data.reddit_current_round
+        addLog(
+          `[Community] R${data.reddit_current_round}/${data.total_rounds} | T:${data.reddit_simulated_hours || 0}h | A:${data.reddit_actions_count}`
+        );
+        prevRedditRound.value = data.reddit_current_round;
       }
-      
+
       // 检测模拟是否已完成（通过 runner_status 或平台完成状态判断）
-      const isCompleted = data.runner_status === 'completed' || data.runner_status === 'stopped'
-      
+      const isCompleted =
+        data.runner_status === "completed" || data.runner_status === "stopped";
+
       // 额外检查：如果后端还没来得及更新 runner_status，但平台已经报告完成
       // 通过检测 twitter_completed 和 reddit_completed 状态判断
-      const platformsCompleted = checkPlatformsCompleted(data)
-      
+      const platformsCompleted = checkPlatformsCompleted(data);
+
       if (isCompleted || platformsCompleted) {
         if (platformsCompleted && !isCompleted) {
-          addLog('✓ 检测到所有平台模拟已结束')
+          addLog("✓ 检测到所有平台模拟已结束");
         }
-        addLog('✓ 模拟已完成')
-        phase.value = 2
-        stopPolling()
-        emit('update-status', 'completed')
+        addLog("✓ 模拟已完成");
+        phase.value = 2;
+        stopPolling();
+        emit("update-status", "completed");
       }
     }
   } catch (err) {
-    console.warn('获取运行状态失败:', err)
+    console.warn("获取运行状态失败:", err);
   }
-}
+};
 
 // 检查所有启用的平台是否已完成
 const checkPlatformsCompleted = (data) => {
   // 如果没有任何平台数据，返回 false
-  if (!data) return false
-  
+  if (!data) {
+    return false;
+  }
+
   // 检查各平台的完成状态
-  const twitterCompleted = data.twitter_completed === true
-  const redditCompleted = data.reddit_completed === true
-  
+  const twitterCompleted = data.twitter_completed === true;
+  const redditCompleted = data.reddit_completed === true;
+
   // 如果至少有一个平台完成了，检查是否所有启用的平台都完成了
   // 通过 actions_count 判断平台是否被启用（如果 count > 0 或 running 曾为 true）
-  const twitterEnabled = (data.twitter_actions_count > 0) || data.twitter_running || twitterCompleted
-  const redditEnabled = (data.reddit_actions_count > 0) || data.reddit_running || redditCompleted
-  
+  const twitterEnabled =
+    data.twitter_actions_count > 0 || data.twitter_running || twitterCompleted;
+  const redditEnabled =
+    data.reddit_actions_count > 0 || data.reddit_running || redditCompleted;
+
   // 如果没有任何平台被启用，返回 false
-  if (!twitterEnabled && !redditEnabled) return false
-  
+  if (!(twitterEnabled || redditEnabled)) {
+    return false;
+  }
+
   // 检查所有启用的平台是否都已完成
-  if (twitterEnabled && !twitterCompleted) return false
-  if (redditEnabled && !redditCompleted) return false
-  
-  return true
-}
+  if (twitterEnabled && !twitterCompleted) {
+    return false;
+  }
+  if (redditEnabled && !redditCompleted) {
+    return false;
+  }
+
+  return true;
+};
 
 const fetchRunStatusDetail = async () => {
-  if (!props.simulationId) return
-  
+  if (!props.simulationId) {
+    return;
+  }
+
   try {
-    const res = await getRunStatusDetail(props.simulationId)
-    
+    const res = await getRunStatusDetail(props.simulationId);
+
     if (res.success && res.data) {
       // 使用 all_actions 获取完整的动作列表
-      const serverActions = res.data.all_actions || []
-      
+      const serverActions = res.data.all_actions || [];
+
       // 增量添加新动作（去重）
-      let newActionsAdded = 0
-      serverActions.forEach(action => {
+      let newActionsAdded = 0;
+      serverActions.forEach((action) => {
         // 生成唯一ID
-        const actionId = action.id || `${action.timestamp}-${action.platform}-${action.agent_id}-${action.action_type}`
-        
+        const actionId =
+          action.id ||
+          `${action.timestamp}-${action.platform}-${action.agent_id}-${action.action_type}`;
+
         if (!actionIds.value.has(actionId)) {
-          actionIds.value.add(actionId)
+          actionIds.value.add(actionId);
           allActions.value.push({
             ...action,
-            _uniqueId: actionId
-          })
-          newActionsAdded++
+            _uniqueId: actionId,
+          });
+          newActionsAdded++;
         }
-      })
-      
+      });
+
       // 不自动滚动，让用户自由查看时间轴
       // 新动作会在底部追加
     }
   } catch (err) {
-    console.warn('获取详细状态失败:', err)
+    console.warn("获取详细状态失败:", err);
   }
-}
+};
 
 // Helpers
 const getActionTypeLabel = (type) => {
   const labels = {
-    'CREATE_POST': 'POST',
-    'REPOST': 'REPOST',
-    'LIKE_POST': 'LIKE',
-    'CREATE_COMMENT': 'COMMENT',
-    'LIKE_COMMENT': 'LIKE',
-    'DO_NOTHING': 'IDLE',
-    'FOLLOW': 'FOLLOW',
-    'SEARCH_POSTS': 'SEARCH',
-    'QUOTE_POST': 'QUOTE',
-    'UPVOTE_POST': 'UPVOTE',
-    'DOWNVOTE_POST': 'DOWNVOTE'
-  }
-  return labels[type] || type || 'UNKNOWN'
-}
+    CREATE_POST: "POST",
+    REPOST: "REPOST",
+    LIKE_POST: "LIKE",
+    CREATE_COMMENT: "COMMENT",
+    LIKE_COMMENT: "LIKE",
+    DO_NOTHING: "IDLE",
+    FOLLOW: "FOLLOW",
+    SEARCH_POSTS: "SEARCH",
+    QUOTE_POST: "QUOTE",
+    UPVOTE_POST: "UPVOTE",
+    DOWNVOTE_POST: "DOWNVOTE",
+  };
+  return labels[type] || type || "UNKNOWN";
+};
 
 const getActionTypeClass = (type) => {
   const classes = {
-    'CREATE_POST': 'badge-post',
-    'REPOST': 'badge-action',
-    'LIKE_POST': 'badge-action',
-    'CREATE_COMMENT': 'badge-comment',
-    'LIKE_COMMENT': 'badge-action',
-    'QUOTE_POST': 'badge-post',
-    'FOLLOW': 'badge-meta',
-    'SEARCH_POSTS': 'badge-meta',
-    'UPVOTE_POST': 'badge-action',
-    'DOWNVOTE_POST': 'badge-action',
-    'DO_NOTHING': 'badge-idle'
-  }
-  return classes[type] || 'badge-default'
-}
+    CREATE_POST: "badge-post",
+    REPOST: "badge-action",
+    LIKE_POST: "badge-action",
+    CREATE_COMMENT: "badge-comment",
+    LIKE_COMMENT: "badge-action",
+    QUOTE_POST: "badge-post",
+    FOLLOW: "badge-meta",
+    SEARCH_POSTS: "badge-meta",
+    UPVOTE_POST: "badge-action",
+    DOWNVOTE_POST: "badge-action",
+    DO_NOTHING: "badge-idle",
+  };
+  return classes[type] || "badge-default";
+};
 
 const truncateContent = (content, maxLength = 100) => {
-  if (!content) return ''
-  if (content.length > maxLength) return content.substring(0, maxLength) + '...'
-  return content
-}
+  if (!content) {
+    return "";
+  }
+  if (content.length > maxLength) {
+    return content.substring(0, maxLength) + "...";
+  }
+  return content;
+};
 
 const formatActionTime = (timestamp) => {
-  if (!timestamp) return ''
-  try {
-    return new Date(timestamp).toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' })
-  } catch {
-    return ''
+  if (!timestamp) {
+    return "";
   }
-}
+  try {
+    return new Date(timestamp).toLocaleTimeString("en-US", {
+      hour12: false,
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+    });
+  } catch {
+    return "";
+  }
+};
 
 const handleNextStep = async () => {
   if (!props.simulationId) {
-    addLog('错误：缺少 simulationId')
-    return
+    addLog("错误：缺少 simulationId");
+    return;
   }
-  
+
   if (isGeneratingReport.value) {
-    addLog('报告生成请求已发送，请稍候...')
-    return
+    addLog("报告生成请求已发送，请稍候...");
+    return;
   }
-  
-  isGeneratingReport.value = true
-  addLog('正在启动报告生成...')
-  
+
+  isGeneratingReport.value = true;
+  addLog("正在启动报告生成...");
+
   try {
     const res = await generateReport({
       simulation_id: props.simulationId,
-      force_regenerate: true
-    })
-    
+      force_regenerate: true,
+    });
+
     if (res.success && res.data) {
-      const reportId = res.data.report_id
-      addLog(`✓ 报告生成任务已启动: ${reportId}`)
-      
+      const reportId = res.data.report_id;
+      addLog(`✓ 报告生成任务已启动: ${reportId}`);
+
       // 跳转到报告页面
-      router.push({ name: 'Report', params: { reportId } })
+      router.push({ name: "Report", params: { reportId } });
     } else {
-      addLog(`✗ 启动报告生成失败: ${res.error || '未知错误'}`)
-      isGeneratingReport.value = false
+      addLog(`✗ 启动报告生成失败: ${res.error || "未知错误"}`);
+      isGeneratingReport.value = false;
     }
   } catch (err) {
-    addLog(`✗ 启动报告生成异常: ${err.message}`)
-    isGeneratingReport.value = false
+    addLog(`✗ 启动报告生成异常: ${err.message}`);
+    isGeneratingReport.value = false;
   }
-}
+};
 
 // Scroll log to bottom
-const logContent = ref(null)
-watch(() => props.systemLogs?.length, () => {
-  nextTick(() => {
-    if (logContent.value) {
-      logContent.value.scrollTop = logContent.value.scrollHeight
-    }
-  })
-})
+const logContent = ref(null);
+watch(
+  () => props.systemLogs?.length,
+  () => {
+    nextTick(() => {
+      if (logContent.value) {
+        logContent.value.scrollTop = logContent.value.scrollHeight;
+      }
+    });
+  }
+);
 
 onMounted(() => {
-  addLog('Step3 模拟运行初始化')
+  addLog("Step3 模拟运行初始化");
   if (props.simulationId) {
-    doStartSimulation()
+    doStartSimulation();
   }
-})
+});
 
 onUnmounted(() => {
-  stopPolling()
-})
+  stopPolling();
+});
 </script>
 
 <style scoped>
@@ -701,19 +740,20 @@ onUnmounted(() => {
   height: 100%;
   display: flex;
   flex-direction: column;
-  background: #FFFFFF;
-  font-family: 'Space Grotesk', 'Noto Sans SC', system-ui, sans-serif;
+  background: #0a0f1a;
+  font-family: 'Inter', sans-serif;
+  color: #e8f1f5;
   overflow: hidden;
 }
 
-/* --- Control Bar --- */
 .control-bar {
-  background: #FFF;
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(12px);
   padding: 12px 24px;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  border-bottom: 1px solid #EAEAEA;
+  border-bottom: 1px solid rgba(125, 211, 192, 0.15);
   z-index: 10;
   height: 64px;
 }
@@ -729,9 +769,9 @@ onUnmounted(() => {
   flex-direction: column;
   gap: 4px;
   padding: 6px 12px;
-  border-radius: 4px;
-  background: #FAFAFA;
-  border: 1px solid #EAEAEA;
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(125, 211, 192, 0.15);
   opacity: 0.7;
   transition: all 0.3s;
   min-width: 140px;
@@ -741,14 +781,14 @@ onUnmounted(() => {
 
 .platform-status.active {
   opacity: 1;
-  border-color: #333;
-  background: #FFF;
+  border-color: #7dd3c0;
+  background: rgba(125, 211, 192, 0.1);
 }
 
 .platform-status.completed {
   opacity: 1;
-  border-color: #1A936F;
-  background: #F2FAF6;
+  border-color: #7dd3c0;
+  background: rgba(125, 211, 192, 0.15);
 }
 
 /* Actions Tooltip */
@@ -759,10 +799,11 @@ onUnmounted(() => {
   transform: translateX(-50%);
   margin-top: 8px;
   padding: 10px 14px;
-  background: #000;
-  color: #FFF;
-  border-radius: 4px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  background: #0a0f1a;
+  color: #e8f1f5;
+  border: 1px solid rgba(125, 211, 192, 0.3);
+  border-radius: 8px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
   opacity: 0;
   visibility: hidden;
   transition: all 0.2s ease;
@@ -863,34 +904,35 @@ onUnmounted(() => {
 
 .status-badge {
   margin-left: auto;
-  color: #1A936F;
+  color: #7dd3c0;
   display: flex;
   align-items: center;
 }
 
-/* Action Button */
 .action-btn {
   display: inline-flex;
   align-items: center;
   gap: 8px;
   padding: 10px 20px;
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 700;
   border: none;
-  border-radius: 4px;
+  border-radius: 12px;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.3s ease;
   text-transform: uppercase;
   letter-spacing: 0.05em;
+  font-family: 'JetBrains Mono', monospace;
 }
 
 .action-btn.primary {
-  background: #000;
-  color: #FFF;
+  background: linear-gradient(135deg, #5b9bd5, #7dd3c0);
+  color: #0a0f1a;
 }
 
 .action-btn.primary:hover:not(:disabled) {
-  background: #333;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(125, 211, 192, 0.4);
 }
 
 .action-btn:disabled {
@@ -898,22 +940,20 @@ onUnmounted(() => {
   cursor: not-allowed;
 }
 
-/* --- Main Content Area --- */
 .main-content-area {
   flex: 1;
   overflow-y: auto;
   position: relative;
-  background: #FFF;
+  background: #0a0f1a;
 }
 
-/* Timeline Header */
 .timeline-header {
   position: sticky;
   top: 0;
-  background: rgba(255, 255, 255, 0.9);
+  background: rgba(10, 15, 26, 0.95);
   backdrop-filter: blur(8px);
   padding: 12px 24px;
-  border-bottom: 1px solid #EAEAEA;
+  border-bottom: 1px solid rgba(125, 211, 192, 0.15);
   z-index: 5;
   display: flex;
   justify-content: center;
@@ -1207,24 +1247,24 @@ onUnmounted(() => {
   opacity: 0;
 }
 
-/* Logs */
 .system-logs {
-  background: #000;
-  color: #DDD;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(12px);
+  color: #e8f1f5;
   padding: 16px;
   font-family: 'JetBrains Mono', monospace;
-  border-top: 1px solid #222;
+  border-top: 1px solid rgba(125, 211, 192, 0.15);
   flex-shrink: 0;
 }
 
 .log-header {
   display: flex;
   justify-content: space-between;
-  border-bottom: 1px solid #333;
+  border-bottom: 1px solid rgba(125, 211, 192, 0.15);
   padding-bottom: 8px;
   margin-bottom: 8px;
   font-size: 10px;
-  color: #666;
+  color: #8899a6;
 }
 
 .log-content {
@@ -1237,7 +1277,7 @@ onUnmounted(() => {
 }
 
 .log-content::-webkit-scrollbar { width: 4px; }
-.log-content::-webkit-scrollbar-thumb { background: #333; border-radius: 2px; }
+.log-content::-webkit-scrollbar-thumb { background: rgba(125, 211, 192, 0.3); border-radius: 2px; }
 
 .log-line {
   font-size: 11px;
@@ -1246,8 +1286,8 @@ onUnmounted(() => {
   line-height: 1.5;
 }
 
-.log-time { color: #555; min-width: 75px; }
-.log-msg { color: #BBB; word-break: break-all; }
+.log-time { color: #5b9bd5; min-width: 75px; }
+.log-msg { color: #e8f1f5; word-break: break-all; }
 .mono { font-family: 'JetBrains Mono', monospace; }
 
 /* Loading spinner for button */

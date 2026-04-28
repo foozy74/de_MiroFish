@@ -74,6 +74,22 @@ class TenantConfig:
     """
 
     def __getattr__(self, name: str) -> Any:
+        # Dynamische Pfade für Multi-Tenancy
+        if name == "OASIS_SIMULATION_DATA_DIR":
+            try:
+                from flask import g
+                import os
+                from app.config import Config
+                tenant = getattr(g, "tenant", None)
+                tenant_id = tenant.tenant_id if tenant else 'default'
+                path = os.path.join(Config.UPLOAD_FOLDER, 'tenants', tenant_id, 'simulations')
+                os.makedirs(path, exist_ok=True)
+                return path
+            except (RuntimeError, ImportError):
+                # Fallback falls außerhalb des Flask-Kontexts
+                from app.config import Config
+                return Config.OASIS_SIMULATION_DATA_DIR
+
         override = _get_tenant_override(name)
         if override is not None:
             logger.debug(f"TenantConfig: Override für '{name}' aktiv")

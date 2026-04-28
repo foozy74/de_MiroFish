@@ -40,6 +40,7 @@
         <GraphPanel 
           :graphData="graphData"
           :loading="graphLoading"
+          :error="graphError"
           :currentPhase="currentPhase"
           @refresh="refreshGraph"
           @toggle-maximize="toggleMaximize('graph')"
@@ -97,6 +98,7 @@ const stepNames = ['Graphaufbau', 'Umgebungsaufbau', 'Simulation starten', 'Beri
 const currentProjectId = ref(route.params.projectId)
 const loading = ref(false)
 const graphLoading = ref(false)
+const graphError = ref('')
 const error = ref('')
 const projectData = ref(null)
 const graphData = ref(null)
@@ -303,12 +305,17 @@ const fetchGraphData = async () => {
       const gRes = await getGraphData(projRes.data.graph_id)
       if (gRes.success) {
         graphData.value = gRes.data
+        graphError.value = ''
         const nodeCount = gRes.data.node_count || gRes.data.nodes?.length || 0
         const edgeCount = gRes.data.edge_count || gRes.data.edges?.length || 0
         addLog(`Graph data refreshed. Nodes: ${nodeCount}, Edges: ${edgeCount}`)
+      } else {
+        graphError.value = gRes.error
+        addLog(`Graph refresh failed: ${gRes.error}`)
       }
     }
   } catch (err) {
+    graphError.value = err.message
     console.warn('Graph fetch error:', err)
   }
 }
@@ -361,11 +368,14 @@ const loadGraph = async (graphId) => {
     const res = await getGraphData(graphId)
     if (res.success) {
       graphData.value = res.data
+      graphError.value = ''
       addLog('Graph data loaded successfully.')
     } else {
+      graphError.value = res.error
       addLog(`Failed to load graph data: ${res.error}`)
     }
   } catch (e) {
+    graphError.value = e.message
     addLog(`Exception loading graph: ${e.message}`)
   } finally {
     graphLoading.value = false
@@ -409,7 +419,8 @@ onUnmounted(() => {
   height: 100vh;
   display: flex;
   flex-direction: column;
-  background: #FFF;
+  background: var(--bg-gradient);
+  color: var(--text-primary);
   overflow: hidden;
   font-family: 'Space Grotesk', 'Noto Sans SC', system-ui, sans-serif;
 }
@@ -417,12 +428,13 @@ onUnmounted(() => {
 /* Header */
 .app-header {
   height: 60px;
-  border-bottom: 1px solid #EAEAEA;
+  border-bottom: 1px solid var(--glass-border);
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 0 24px;
-  background: #FFF;
+  background: rgba(10, 15, 26, 0.8);
+  backdrop-filter: blur(10px);
   z-index: 100;
   position: relative;
 }
@@ -497,7 +509,7 @@ onUnmounted(() => {
 
 .step-name {
   font-weight: 700;
-  color: #000;
+  color: var(--text-primary);
 }
 
 .step-divider {

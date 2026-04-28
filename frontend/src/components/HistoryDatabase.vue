@@ -13,7 +13,7 @@
     <!-- 标题区域 -->
     <div class="section-header">
       <div class="section-line"></div>
-      <span class="section-title">推演记录</span>
+      <span class="section-title">Simulationshistorie</span>
       <div class="section-line"></div>
     </div>
 
@@ -36,16 +36,16 @@
             <span 
               class="status-icon" 
               :class="{ available: project.project_id, unavailable: !project.project_id }"
-              title="图谱构建"
+              title="Graph-Aufbau"
             >◇</span>
             <span 
               class="status-icon available" 
-              title="环境搭建"
+              title="Umgebungseinrichtung"
             >◈</span>
             <span 
               class="status-icon" 
               :class="{ available: project.report_id, unavailable: !project.report_id }"
-              title="分析报告"
+              title="Analysebericht"
             >◆</span>
           </div>
         </div>
@@ -67,13 +67,13 @@
             </div>
             <!-- 如果有更多文件，显示提示 -->
             <div v-if="project.files.length > 3" class="files-more">
-              +{{ project.files.length - 3 }} 个文件
+              +{{ project.files.length - 3 }} Dateien
             </div>
           </div>
           <!-- 无文件时的占位 -->
           <div class="files-empty" v-else>
             <span class="empty-file-icon">◇</span>
-            <span class="empty-file-text">暂无文件</span>
+            <span class="empty-file-text">Keine Dateien</span>
           </div>
         </div>
 
@@ -102,7 +102,7 @@
     <!-- 加载状态 -->
     <div v-if="loading" class="loading-state">
       <span class="loading-spinner"></span>
-      <span class="loading-text">加载中...</span>
+              <span class="loading-text">Laden...</span>
     </div>
 
     <!-- 历史回放详情弹窗 -->
@@ -126,27 +126,27 @@
             <div class="modal-body">
               <!-- 模拟需求 -->
               <div class="modal-section">
-                <div class="modal-label">模拟需求</div>
-                <div class="modal-requirement">{{ selectedProject.simulation_requirement || '无' }}</div>
+                <div class="modal-label">Simulationsanforderung</div>
+                <div class="modal-requirement">{{ selectedProject.simulation_requirement || 'Keine' }}</div>
               </div>
 
               <!-- 文件列表 -->
               <div class="modal-section">
-                <div class="modal-label">关联文件</div>
+                <div class="modal-label">Zugehörige Dateien</div>
                 <div class="modal-files" v-if="selectedProject.files && selectedProject.files.length > 0">
                   <div v-for="(file, index) in selectedProject.files" :key="index" class="modal-file-item">
                     <span class="file-tag" :class="getFileType(file.filename)">{{ getFileTypeLabel(file.filename) }}</span>
                     <span class="modal-file-name">{{ file.filename }}</span>
                   </div>
                 </div>
-                <div class="modal-empty" v-else>暂无关联文件</div>
+                <div class="modal-empty" v-else>Keine zugehörigen Dateien</div>
               </div>
             </div>
 
             <!-- 推演回放分割线 -->
             <div class="modal-divider">
               <span class="divider-line"></span>
-              <span class="divider-text">推演回放</span>
+              <span class="divider-text">Simulationswiedergabe</span>
               <span class="divider-line"></span>
             </div>
 
@@ -159,7 +159,7 @@
               >
                 <span class="btn-step">Step1</span>
                 <span class="btn-icon">◇</span>
-                <span class="btn-text">图谱构建</span>
+                <span class="btn-text">Graph-Aufbau</span>
               </button>
               <button 
                 class="modal-btn btn-simulation" 
@@ -167,7 +167,7 @@
               >
                 <span class="btn-step">Step2</span>
                 <span class="btn-icon">◈</span>
-                <span class="btn-text">环境搭建</span>
+                <span class="btn-text">Umgebungseinrichtung</span>
               </button>
               <button 
                 class="modal-btn btn-report" 
@@ -176,12 +176,12 @@
               >
                 <span class="btn-step">Step4</span>
                 <span class="btn-icon">◆</span>
-                <span class="btn-text">分析报告</span>
+                <span class="btn-text">Analysebericht</span>
               </button>
             </div>
             <!-- 不可回放提示 -->
             <div class="modal-playback-hint">
-              <span class="hint-text">Step3「开始模拟」与 Step5「深度互动」需在运行中启动，不支持历史回放</span>
+              <span class="hint-text">Step3 „Simulation starten" und Step5 „Tiefe Interaktion" müssen während der Ausführung gestartet werden und unterstützen keine historische Wiedergabe</span>
             </div>
           </div>
         </div>
@@ -191,381 +191,435 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted, onActivated, watch, nextTick } from 'vue'
-import { useRouter, useRoute } from 'vue-router'
-import { getSimulationHistory } from '../api/simulation'
+import {
+  computed,
+  nextTick,
+  onActivated,
+  onMounted,
+  onUnmounted,
+  ref,
+  watch,
+} from "vue";
+import { useRoute, useRouter } from "vue-router";
+import { getSimulationHistory } from "../api/simulation";
 
-const router = useRouter()
-const route = useRoute()
+const router = useRouter();
+const route = useRoute();
 
 // 状态
-const projects = ref([])
-const loading = ref(true)
-const isExpanded = ref(false)
-const hoveringCard = ref(null)
-const historyContainer = ref(null)
-const selectedProject = ref(null)  // 当前选中的项目（用于弹窗）
-let observer = null
-let isAnimating = false  // 动画锁，防止闪烁
-let expandDebounceTimer = null  // 防抖定时器
-let pendingState = null  // 记录待执行的目标状态
+const projects = ref([]);
+const loading = ref(true);
+const isExpanded = ref(false);
+const hoveringCard = ref(null);
+const historyContainer = ref(null);
+const selectedProject = ref(null); // 当前选中的项目（用于弹窗）
+let observer = null;
+let isAnimating = false; // 动画锁，防止闪烁
+let expandDebounceTimer = null; // 防抖定时器
+let pendingState = null; // 记录待执行的目标状态
 
 // 卡片布局配置 - 调整为更宽的比例
-const CARDS_PER_ROW = 4
-const CARD_WIDTH = 280  
-const CARD_HEIGHT = 280 
-const CARD_GAP = 24
+const CARDS_PER_ROW = 4;
+const CARD_WIDTH = 280;
+const CARD_HEIGHT = 280;
+const CARD_GAP = 24;
 
 // 动态计算容器高度样式
 const containerStyle = computed(() => {
   if (!isExpanded.value) {
     // 折叠态：固定高度
-    return { minHeight: '420px' }
+    return { minHeight: "420px" };
   }
-  
+
   // 展开态：根据卡片数量动态计算高度
-  const total = projects.value.length
+  const total = projects.value.length;
   if (total === 0) {
-    return { minHeight: '280px' }
+    return { minHeight: "280px" };
   }
-  
-  const rows = Math.ceil(total / CARDS_PER_ROW)
+
+  const rows = Math.ceil(total / CARDS_PER_ROW);
   // 计算实际需要的高度：行数 * 卡片高度 + (行数-1) * 间距 + 少量底部间距
-  const expandedHeight = rows * CARD_HEIGHT + (rows - 1) * CARD_GAP + 10
-  
-  return { minHeight: `${expandedHeight}px` }
-})
+  const expandedHeight = rows * CARD_HEIGHT + (rows - 1) * CARD_GAP + 10;
+
+  return { minHeight: `${expandedHeight}px` };
+});
 
 // 获取卡片样式
 const getCardStyle = (index) => {
-  const total = projects.value.length
-  
+  const total = projects.value.length;
+
   if (isExpanded.value) {
     // 展开态：网格布局
-    const transition = 'transform 700ms cubic-bezier(0.23, 1, 0.32, 1), opacity 700ms cubic-bezier(0.23, 1, 0.32, 1), box-shadow 0.3s ease, border-color 0.3s ease'
+    const transition =
+      "transform 700ms cubic-bezier(0.23, 1, 0.32, 1), opacity 700ms cubic-bezier(0.23, 1, 0.32, 1), box-shadow 0.3s ease, border-color 0.3s ease";
 
-    const col = index % CARDS_PER_ROW
-    const row = Math.floor(index / CARDS_PER_ROW)
-    
+    const col = index % CARDS_PER_ROW;
+    const row = Math.floor(index / CARDS_PER_ROW);
+
     // 计算当前行的卡片数量，确保每行居中
-    const currentRowStart = row * CARDS_PER_ROW
-    const currentRowCards = Math.min(CARDS_PER_ROW, total - currentRowStart)
-    
-    const rowWidth = currentRowCards * CARD_WIDTH + (currentRowCards - 1) * CARD_GAP
-    
-    const startX = -(rowWidth / 2) + (CARD_WIDTH / 2)
-    const colInRow = index % CARDS_PER_ROW
-    const x = startX + colInRow * (CARD_WIDTH + CARD_GAP)
-    
+    const currentRowStart = row * CARDS_PER_ROW;
+    const currentRowCards = Math.min(CARDS_PER_ROW, total - currentRowStart);
+
+    const rowWidth =
+      currentRowCards * CARD_WIDTH + (currentRowCards - 1) * CARD_GAP;
+
+    const startX = -(rowWidth / 2) + CARD_WIDTH / 2;
+    const colInRow = index % CARDS_PER_ROW;
+    const x = startX + colInRow * (CARD_WIDTH + CARD_GAP);
+
     // 向下展开，增加与标题的间距
-    const y = 20 + row * (CARD_HEIGHT + CARD_GAP)
+    const y = 20 + row * (CARD_HEIGHT + CARD_GAP);
 
     return {
       transform: `translate(${x}px, ${y}px) rotate(0deg) scale(1)`,
       zIndex: 100 + index,
       opacity: 1,
-      transition: transition
-    }
-  } else {
-    // 折叠态：扇形堆叠
-    const transition = 'transform 700ms cubic-bezier(0.23, 1, 0.32, 1), opacity 700ms cubic-bezier(0.23, 1, 0.32, 1), box-shadow 0.3s ease, border-color 0.3s ease'
-
-    const centerIndex = (total - 1) / 2
-    const offset = index - centerIndex
-    
-    const x = offset * 35
-    // 调整起始位置，靠近标题但保持适当间距
-    const y = 25 + Math.abs(offset) * 8
-    const r = offset * 3
-    const s = 0.95 - Math.abs(offset) * 0.05
-    
-    return {
-      transform: `translate(${x}px, ${y}px) rotate(${r}deg) scale(${s})`,
-      zIndex: 10 + index,
-      opacity: 1,
-      transition: transition
-    }
+      transition,
+    };
   }
-}
+  // 折叠态：扇形堆叠
+  const transition =
+    "transform 700ms cubic-bezier(0.23, 1, 0.32, 1), opacity 700ms cubic-bezier(0.23, 1, 0.32, 1), box-shadow 0.3s ease, border-color 0.3s ease";
+
+  const centerIndex = (total - 1) / 2;
+  const offset = index - centerIndex;
+
+  const x = offset * 35;
+  // 调整起始位置，靠近标题但保持适当间距
+  const y = 25 + Math.abs(offset) * 8;
+  const r = offset * 3;
+  const s = 0.95 - Math.abs(offset) * 0.05;
+
+  return {
+    transform: `translate(${x}px, ${y}px) rotate(${r}deg) scale(${s})`,
+    zIndex: 10 + index,
+    opacity: 1,
+    transition,
+  };
+};
 
 // 根据轮数进度获取样式类
 const getProgressClass = (simulation) => {
-  const current = simulation.current_round || 0
-  const total = simulation.total_rounds || 0
-  
+  const current = simulation.current_round || 0;
+  const total = simulation.total_rounds || 0;
+
   if (total === 0 || current === 0) {
     // 未开始
-    return 'not-started'
-  } else if (current >= total) {
-    // 已完成
-    return 'completed'
-  } else {
-    // 进行中
-    return 'in-progress'
+    return "not-started";
   }
-}
+  if (current >= total) {
+    // 已完成
+    return "completed";
+  }
+  // 进行中
+  return "in-progress";
+};
 
 // 格式化日期（只显示日期部分）
 const formatDate = (dateStr) => {
-  if (!dateStr) return ''
-  try {
-    const date = new Date(dateStr)
-    return date.toISOString().slice(0, 10)
-  } catch {
-    return dateStr?.slice(0, 10) || ''
+  if (!dateStr) {
+    return "";
   }
-}
+  try {
+    const date = new Date(dateStr);
+    return date.toISOString().slice(0, 10);
+  } catch {
+    return dateStr?.slice(0, 10) || "";
+  }
+};
 
 // 格式化时间（显示时:分）
 const formatTime = (dateStr) => {
-  if (!dateStr) return ''
-  try {
-    const date = new Date(dateStr)
-    const hours = date.getHours().toString().padStart(2, '0')
-    const minutes = date.getMinutes().toString().padStart(2, '0')
-    return `${hours}:${minutes}`
-  } catch {
-    return ''
+  if (!dateStr) {
+    return "";
   }
-}
+  try {
+    const date = new Date(dateStr);
+    const hours = date.getHours().toString().padStart(2, "0");
+    const minutes = date.getMinutes().toString().padStart(2, "0");
+    return `${hours}:${minutes}`;
+  } catch {
+    return "";
+  }
+};
 
 // 截断文本
 const truncateText = (text, maxLength) => {
-  if (!text) return ''
-  return text.length > maxLength ? text.slice(0, maxLength) + '...' : text
-}
+  if (!text) {
+    return "";
+  }
+  return text.length > maxLength ? text.slice(0, maxLength) + "..." : text;
+};
 
 // 从模拟需求生成标题（取前20字）
 const getSimulationTitle = (requirement) => {
-  if (!requirement) return '未命名模拟'
-  const title = requirement.slice(0, 20)
-  return requirement.length > 20 ? title + '...' : title
-}
+  if (!requirement) {
+    return "未命名模拟";
+  }
+  const title = requirement.slice(0, 20);
+  return requirement.length > 20 ? title + "..." : title;
+};
 
 // 格式化 simulation_id 显示（截取前6位）
 const formatSimulationId = (simulationId) => {
-  if (!simulationId) return 'SIM_UNKNOWN'
-  const prefix = simulationId.replace('sim_', '').slice(0, 6)
-  return `SIM_${prefix.toUpperCase()}`
-}
+  if (!simulationId) {
+    return "SIM_UNKNOWN";
+  }
+  const prefix = simulationId.replace("sim_", "").slice(0, 6);
+  return `SIM_${prefix.toUpperCase()}`;
+};
 
 // 格式化轮数显示（当前轮/总轮数）
 const formatRounds = (simulation) => {
-  const current = simulation.current_round || 0
-  const total = simulation.total_rounds || 0
-  if (total === 0) return '未开始'
-  return `${current}/${total} 轮`
-}
+  const current = simulation.current_round || 0;
+  const total = simulation.total_rounds || 0;
+  if (total === 0) {
+    return "未开始";
+  }
+  return `${current}/${total} 轮`;
+};
 
 // 获取文件类型（用于样式）
 const getFileType = (filename) => {
-  if (!filename) return 'other'
-  const ext = filename.split('.').pop()?.toLowerCase()
-  const typeMap = {
-    'pdf': 'pdf',
-    'doc': 'doc', 'docx': 'doc',
-    'xls': 'xls', 'xlsx': 'xls', 'csv': 'xls',
-    'ppt': 'ppt', 'pptx': 'ppt',
-    'txt': 'txt', 'md': 'txt', 'json': 'code',
-    'jpg': 'img', 'jpeg': 'img', 'png': 'img', 'gif': 'img',
-    'zip': 'zip', 'rar': 'zip', '7z': 'zip'
+  if (!filename) {
+    return "other";
   }
-  return typeMap[ext] || 'other'
-}
+  const ext = filename.split(".").pop()?.toLowerCase();
+  const typeMap = {
+    pdf: "pdf",
+    doc: "doc",
+    docx: "doc",
+    xls: "xls",
+    xlsx: "xls",
+    csv: "xls",
+    ppt: "ppt",
+    pptx: "ppt",
+    txt: "txt",
+    md: "txt",
+    json: "code",
+    jpg: "img",
+    jpeg: "img",
+    png: "img",
+    gif: "img",
+    zip: "zip",
+    rar: "zip",
+    "7z": "zip",
+  };
+  return typeMap[ext] || "other";
+};
 
 // 获取文件类型标签文本
 const getFileTypeLabel = (filename) => {
-  if (!filename) return 'FILE'
-  const ext = filename.split('.').pop()?.toUpperCase()
-  return ext || 'FILE'
-}
+  if (!filename) {
+    return "FILE";
+  }
+  const ext = filename.split(".").pop()?.toUpperCase();
+  return ext || "FILE";
+};
 
 // 截断文件名（保留扩展名）
 const truncateFilename = (filename, maxLength) => {
-  if (!filename) return '未知文件'
-  if (filename.length <= maxLength) return filename
-  
-  const ext = filename.includes('.') ? '.' + filename.split('.').pop() : ''
-  const nameWithoutExt = filename.slice(0, filename.length - ext.length)
-  const truncatedName = nameWithoutExt.slice(0, maxLength - ext.length - 3) + '...'
-  return truncatedName + ext
-}
+  if (!filename) {
+    return "未知文件";
+  }
+  if (filename.length <= maxLength) {
+    return filename;
+  }
+
+  const ext = filename.includes(".") ? "." + filename.split(".").pop() : "";
+  const nameWithoutExt = filename.slice(0, filename.length - ext.length);
+  const truncatedName =
+    nameWithoutExt.slice(0, maxLength - ext.length - 3) + "...";
+  return truncatedName + ext;
+};
 
 // 打开项目详情弹窗
 const navigateToProject = (simulation) => {
-  selectedProject.value = simulation
-}
+  selectedProject.value = simulation;
+};
 
 // 关闭弹窗
 const closeModal = () => {
-  selectedProject.value = null
-}
+  selectedProject.value = null;
+};
 
 // 导航到图谱构建页面（Project）
 const goToProject = () => {
   if (selectedProject.value?.project_id) {
     router.push({
-      name: 'Process',
-      params: { projectId: selectedProject.value.project_id }
-    })
-    closeModal()
+      name: "Process",
+      params: { projectId: selectedProject.value.project_id },
+    });
+    closeModal();
   }
-}
+};
 
 // 导航到环境配置页面（Simulation）
 const goToSimulation = () => {
   if (selectedProject.value?.simulation_id) {
     router.push({
-      name: 'Simulation',
-      params: { simulationId: selectedProject.value.simulation_id }
-    })
-    closeModal()
+      name: "Simulation",
+      params: { simulationId: selectedProject.value.simulation_id },
+    });
+    closeModal();
   }
-}
+};
 
 // 导航到分析报告页面（Report）
 const goToReport = () => {
   if (selectedProject.value?.report_id) {
     router.push({
-      name: 'Report',
-      params: { reportId: selectedProject.value.report_id }
-    })
-    closeModal()
+      name: "Report",
+      params: { reportId: selectedProject.value.report_id },
+    });
+    closeModal();
   }
-}
+};
 
 // 加载历史项目
 const loadHistory = async () => {
   try {
-    loading.value = true
-    const response = await getSimulationHistory(20)
+    loading.value = true;
+    const response = await getSimulationHistory(20);
     if (response.success) {
-      projects.value = response.data || []
+      projects.value = response.data || [];
     }
   } catch (error) {
-    console.error('加载历史项目失败:', error)
-    projects.value = []
+    console.error("加载历史项目失败:", error);
+    projects.value = [];
   } finally {
-    loading.value = false
+    loading.value = false;
   }
-}
+};
 
 // 初始化 IntersectionObserver
 const initObserver = () => {
   if (observer) {
-    observer.disconnect()
+    observer.disconnect();
   }
-  
+
   observer = new IntersectionObserver(
     (entries) => {
       entries.forEach((entry) => {
-        const shouldExpand = entry.isIntersecting
-        
+        const shouldExpand = entry.isIntersecting;
+
         // 更新待执行的目标状态（无论是否在动画中都要记录最新的目标状态）
-        pendingState = shouldExpand
-        
+        pendingState = shouldExpand;
+
         // 清除之前的防抖定时器（新的滚动意图会覆盖旧的）
         if (expandDebounceTimer) {
-          clearTimeout(expandDebounceTimer)
-          expandDebounceTimer = null
+          clearTimeout(expandDebounceTimer);
+          expandDebounceTimer = null;
         }
-        
+
         // 如果正在动画中，只记录状态，等动画结束后处理
-        if (isAnimating) return
-        
+        if (isAnimating) {
+          return;
+        }
+
         // 如果目标状态与当前状态相同，不需要处理
         if (shouldExpand === isExpanded.value) {
-          pendingState = null
-          return
+          pendingState = null;
+          return;
         }
-        
+
         // 使用防抖延迟状态切换，防止快速闪烁
         // 展开时延迟较短(50ms)，收起时延迟较长(200ms)以增加稳定性
-        const delay = shouldExpand ? 50 : 200
-        
+        const delay = shouldExpand ? 50 : 200;
+
         expandDebounceTimer = setTimeout(() => {
           // 检查是否正在动画
-          if (isAnimating) return
-          
+          if (isAnimating) {
+            return;
+          }
+
           // 检查待执行状态是否仍需要执行（可能已被后续滚动覆盖）
-          if (pendingState === null || pendingState === isExpanded.value) return
-          
+          if (pendingState === null || pendingState === isExpanded.value) {
+            return;
+          }
+
           // 设置动画锁
-          isAnimating = true
-          isExpanded.value = pendingState
-          pendingState = null
-          
+          isAnimating = true;
+          isExpanded.value = pendingState;
+          pendingState = null;
+
           // 动画完成后解除锁定，并检查是否有待处理的状态变化
           setTimeout(() => {
-            isAnimating = false
-            
+            isAnimating = false;
+
             // 动画结束后，检查是否有新的待执行状态
             if (pendingState !== null && pendingState !== isExpanded.value) {
               // 延迟一小段时间再执行，避免太快切换
               expandDebounceTimer = setTimeout(() => {
-                if (pendingState !== null && pendingState !== isExpanded.value) {
-                  isAnimating = true
-                  isExpanded.value = pendingState
-                  pendingState = null
+                if (
+                  pendingState !== null &&
+                  pendingState !== isExpanded.value
+                ) {
+                  isAnimating = true;
+                  isExpanded.value = pendingState;
+                  pendingState = null;
                   setTimeout(() => {
-                    isAnimating = false
-                  }, 750)
+                    isAnimating = false;
+                  }, 750);
                 }
-              }, 100)
+              }, 100);
             }
-          }, 750)
-        }, delay)
-      })
+          }, 750);
+        }, delay);
+      });
     },
     {
       // 使用多个阈值，使检测更平滑
       threshold: [0.4, 0.6, 0.8],
       // 调整 rootMargin，视口底部向上收缩，需要滚动更多才触发展开
-      rootMargin: '0px 0px -150px 0px'
+      rootMargin: "0px 0px -150px 0px",
     }
-  )
-  
+  );
+
   // 开始观察
   if (historyContainer.value) {
-    observer.observe(historyContainer.value)
+    observer.observe(historyContainer.value);
   }
-}
+};
 
 // 监听路由变化，当返回首页时重新加载数据
-watch(() => route.path, (newPath) => {
-  if (newPath === '/') {
-    loadHistory()
+watch(
+  () => route.path,
+  (newPath) => {
+    if (newPath === "/") {
+      loadHistory();
+    }
   }
-})
+);
 
 onMounted(async () => {
   // 确保 DOM 渲染完成后再加载数据
-  await nextTick()
-  await loadHistory()
-  
+  await nextTick();
+  await loadHistory();
+
   // 等待 DOM 渲染后初始化观察器
   setTimeout(() => {
-    initObserver()
-  }, 100)
-})
+    initObserver();
+  }, 100);
+});
 
 // 如果使用 keep-alive，在组件激活时重新加载数据
 onActivated(() => {
-  loadHistory()
-})
+  loadHistory();
+});
 
 onUnmounted(() => {
   // 清理 Intersection Observer
   if (observer) {
-    observer.disconnect()
-    observer = null
+    observer.disconnect();
+    observer = null;
   }
   // 清理防抖定时器
   if (expandDebounceTimer) {
-    clearTimeout(expandDebounceTimer)
-    expandDebounceTimer = null
+    clearTimeout(expandDebounceTimer);
+    expandDebounceTimer = null;
   }
-})
+});
 </script>
 
 <style scoped>

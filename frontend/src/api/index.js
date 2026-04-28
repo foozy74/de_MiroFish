@@ -12,6 +12,11 @@ const service = axios.create({
 // 请求拦截器
 service.interceptors.request.use(
   config => {
+    // Phase 4: Frontend Integration - Inject Clerk JWT tokens for tenant identification
+    const token = localStorage.getItem('clerk_session_token');
+    if (token) {
+      config.headers['Authorization'] = `Bearer ${token}`;
+    }
     return config
   },
   error => {

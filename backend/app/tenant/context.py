@@ -25,9 +25,9 @@ class TenantContext:
     """
 
     tenant_id: str
-    org_id: str
-    org_slug: str
-    display_name: str
-    schema_name: str
-    plan: str
+    org_id: str = "default"
+    org_slug: str = "default"
+    display_name: str = "Default Tenant"
+    schema_name: str = "public"
+    plan: str = "free"
     config_overrides: Dict[str, str] = field(default_factory=dict)

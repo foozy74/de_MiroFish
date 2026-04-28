@@ -1,250 +1,251 @@
 """
-Tenant-Datenbankzugriff (MiroFish)
+Tenant-Datenbankzugriff (MiroFish) - SQLite Version
 
-Stellt zwei Dienste bereit:
-1. get_tenant_from_db() — synchroner psycopg3-Zugriff auf shared.*
-2. get_tenant_db_url()  — DATABASE_URL mit search_path für direkte psycopg3-Nutzung
-
-MiroFish verwendet kein async SQLAlchemy, daher kein Engine-Cache wie BettaFish.
-Zukünftige Simulation-Tabellen (Phase 1) werden über get_tenant_db_url() erreichbar.
+Stellt Dienste bereit um Tenant-Metadaten und API-Key-Overrides 
+aus einer lokalen shared.db zu laden.
 """
 
 import os
+import sqlite3
+import json
 from typing import Dict, List, Optional
+from datetime import datetime
 
 from app.utils.logger import get_logger
-
 from .context import TenantContext
 from .crypto import decrypt_value, encrypt_value
+from ..config import Config
 
 logger = get_logger("mirofish.tenant.db")
 
-# Engine-Cache bleibt leer bis Phase 1 (Simulationstabellen)
-_tenant_engines: Dict[str, object] = {}
+def _get_shared_db_path() -> str:
+    """Gibt den Pfad zur zentralen Shared-Datenbank zurück."""
+    path = os.path.join(Config.UPLOAD_FOLDER, 'shared.db')
+    os.makedirs(Config.UPLOAD_FOLDER, exist_ok=True)
+    return path
 
+def _get_conn():
+    """Erstellt eine Verbindung zur shared.db."""
+    conn = sqlite3.connect(_get_shared_db_path())
+    conn.row_factory = sqlite3.Row
+    return conn
 
-def _get_db_url() -> str:
-    """Liest DATABASE_URL aus der Umgebung (Pflichtfeld)."""
-    url = os.environ.get("DATABASE_URL")
-    if not url:
-        raise RuntimeError("Umgebungsvariable DATABASE_URL ist nicht gesetzt.")
-    return url
-
-
-def get_tenant_db_url(schema_name: str) -> str:
-    """
-    Gibt eine DATABASE_URL zurück, bei der der search_path auf das Tenant-Schema
-    gesetzt ist. Kann für psycopg3-Verbindungen direkt genutzt werden.
-
-    Beispiel:
-        conn_str = get_tenant_db_url(tenant.schema_name)
-        with psycopg.connect(conn_str) as conn:
-            ...
-
-    Args:
-        schema_name: PostgreSQL-Schema des Tenants (z.B. "tenant_meine_firma")
-
-    Returns:
-        DATABASE_URL mit options=-csearch_path=<schema>,shared,public
-    """
-    base_url = _get_db_url()
-    search_path = f"{schema_name},shared,public"
-    # psycopg3 / libpq: options=-csearch_path=... im Connection-String
-    separator = "&" if "?" in base_url else "?"
-    return f"{base_url}{separator}options=-csearch_path%3D{search_path.replace(',', '%2C')}"
-
+def init_shared_db():
+    """Initialisiert die Tabellen in der shared.db falls sie nicht existieren."""
+    conn = _get_conn()
+    try:
+        cursor = conn.cursor()
+        # Tabelle für Tenants
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS tenants (
+                id TEXT PRIMARY KEY,
+                clerk_org_id TEXT UNIQUE NOT NULL,
+                clerk_org_slug TEXT,
+                display_name TEXT NOT NULL,
+                schema_name TEXT UNIQUE NOT NULL,
+                plan TEXT DEFAULT 'free',
+                status TEXT DEFAULT 'active',
+                config_overrides TEXT DEFAULT '{}',
+                created_at TEXT DEFAULT (datetime('now')),
+                updated_at TEXT DEFAULT (datetime('now'))
+            )
+        """)
+        # Tabelle für verschlüsselte API-Keys
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS tenant_api_keys (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT REFERENCES tenants(id) ON DELETE CASCADE,
+                key_name TEXT NOT NULL,
+                encrypted_value BLOB NOT NULL,
+                iv BLOB NOT NULL,
+                created_at TEXT DEFAULT (datetime('now')),
+                updated_at TEXT DEFAULT (datetime('now')),
+                UNIQUE(tenant_id, key_name)
+            )
+        """)
+        conn.commit()
+    finally:
+        conn.close()
 
 def get_tenant_from_db(org_id: str) -> Optional[TenantContext]:
-    """
-    Lädt Tenant-Metadaten und API-Key-Overrides aus dem shared-Schema.
-
-    API-Keys werden via crypto.decrypt_value() entschlüsselt
-    (Phase 1d: Klartext-Bytes; Phase 5: AES-256-GCM).
-
-    Args:
-        org_id: Clerk Organization ID (z.B. "org_abc123")
-
-    Returns:
-        TenantContext oder None wenn nicht gefunden/gesperrt
-    """
-    import psycopg          # lazy import: psycopg3 nur wenn DB verfügbar
-    import psycopg.rows
-
+    """Lädt Tenant-Metadaten aus der lokalen SQLite shared.db."""
+    init_shared_db() # Sicherstellen dass DB existiert
+    
+    conn = _get_conn()
     try:
-        with psycopg.connect(_get_db_url()) as conn:
-            with conn.cursor(row_factory=psycopg.rows.dict_row) as cur:
-                # Tenant-Zeile laden
-                cur.execute(
-                    """
-                    SELECT id, clerk_org_id, clerk_org_slug, display_name,
-                           schema_name, plan
-                    FROM   shared.tenants
-                    WHERE  clerk_org_id = %s
-                    AND    status = 'active'
-                    """,
-                    (org_id,),
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT id, clerk_org_id, clerk_org_slug, display_name, schema_name, plan
+            FROM tenants
+            WHERE clerk_org_id = ? AND status = 'active'
+        """, (org_id,))
+        
+        row = cursor.fetchone()
+        if not row:
+            # Automatisches Provisioning falls Tenant noch nicht existiert (optional)
+            # Für jetzt: Warning und None
+            logger.warning(f"Tenant nicht in shared.db gefunden: {org_id}")
+            return None
+
+        # API-Keys laden
+        cursor.execute("""
+            SELECT key_name, encrypted_value, iv
+            FROM tenant_api_keys
+            WHERE tenant_id = ?
+        """, (row["id"],))
+        key_rows = cursor.fetchall()
+
+        config_overrides: Dict[str, str] = {}
+        for kr in key_rows:
+            try:
+                config_overrides[kr["key_name"]] = decrypt_value(
+                    kr["encrypted_value"],
+                    kr["iv"]
                 )
-                row = cur.fetchone()
-                if not row:
-                    logger.warning(f"Tenant nicht gefunden oder gesperrt: {org_id}")
-                    return None
+            except Exception as exc:
+                logger.warning(f"Key-Entschlüsselung fehlgeschlagen [tenant={org_id}, key={kr['key_name']}]: {exc}")
 
-                # API-Key-Overrides laden
-                cur.execute(
-                    """
-                    SELECT key_name, encrypted_value, iv
-                    FROM   shared.tenant_api_keys
-                    WHERE  tenant_id = %s
-                    """,
-                    (str(row["id"]),),
-                )
-                key_rows = cur.fetchall()
+        return TenantContext(
+            tenant_id=row["id"],
+            org_id=row["clerk_org_id"],
+            org_slug=row["clerk_org_slug"],
+            display_name=row["display_name"],
+            schema_name=row["schema_name"],
+            plan=row["plan"],
+            config_overrides=config_overrides
+        )
+    finally:
+        conn.close()
 
-                config_overrides: Dict[str, str] = {}
-                for kr in key_rows:
-                    try:
-                        config_overrides[kr["key_name"]] = decrypt_value(
-                            bytes(kr["encrypted_value"]),
-                            bytes(kr["iv"]),
-                        )
-                    except Exception as exc:
-                        logger.warning(
-                            f"API-Key Entschlüsselung fehlgeschlagen "
-                            f"[tenant={org_id}, key={kr['key_name']}]: {exc}"
-                        )
+def upsert_tenant_api_key(tenant_id: str, key_name: str, plaintext: str) -> None:
+    """Speichert einen verschlüsselten API-Key lokal."""
+    init_shared_db()
+    encrypted, iv = encrypt_value(plaintext)
+    key_id = f"key_{os.urandom(8).hex()}"
+    
+    conn = _get_conn()
+    try:
+        cursor = conn.cursor()
+        cursor.execute("""
+            INSERT INTO tenant_api_keys (id, tenant_id, key_name, encrypted_value, iv, updated_at)
+            VALUES (?, ?, ?, ?, ?, datetime('now'))
+            ON CONFLICT(tenant_id, key_name) DO UPDATE SET
+                encrypted_value = excluded.encrypted_value,
+                iv = excluded.iv,
+                updated_at = datetime('now')
+        """, (key_id, tenant_id, key_name, encrypted, iv))
+        conn.commit()
+    finally:
+        conn.close()
 
-                return TenantContext(
-                    tenant_id=str(row["id"]),
-                    org_id=row["clerk_org_id"],
-                    org_slug=row["clerk_org_slug"],
-                    display_name=row["display_name"],
-                    schema_name=row["schema_name"],
-                    plan=row["plan"],
-                    config_overrides=config_overrides,
-                )
-
-    except RuntimeError:
-        raise
-    except Exception as exc:
-        logger.error(f"Tenant-DB-Abfrage fehlgeschlagen [{org_id}]: {exc}")
-        return None
-
-
-# ─── Self-Service: API-Keys schreiben / löschen ───────────────────────────────
+def register_tenant(clerk_org_id: str, display_name: str, org_slug: str = None) -> str:
+    """Registriert einen neuen Tenant in der shared.db."""
+    init_shared_db()
+    tenant_id = f"ten_{os.urandom(8).hex()}"
+    schema_name = f"tenant_{clerk_org_id.lower().replace('org_', '')}"
+    
+    conn = _get_conn()
+    try:
+        cursor = conn.cursor()
+        cursor.execute("""
+            INSERT INTO tenants (id, clerk_org_id, clerk_org_slug, display_name, schema_name)
+            VALUES (?, ?, ?, ?, ?)
+            ON CONFLICT(clerk_org_id) DO UPDATE SET
+                display_name = excluded.display_name,
+                clerk_org_slug = excluded.clerk_org_slug,
+                updated_at = datetime('now')
+        """, (tenant_id, clerk_org_id, org_slug, display_name, schema_name))
+        conn.commit()
+        return tenant_id
+    finally:
+        conn.close()
 
 def _mask_value(value: str) -> str:
-    """Zeigt erste 4 + **** + letzte 4 Zeichen (oder nur **** wenn zu kurz)."""
     if len(value) > 12:
         return f"{value[:4]}****{value[-4:]}"
     return "****"
 
-
-def upsert_tenant_api_key(tenant_id: str, key_name: str, plaintext: str) -> None:
-    """Speichert oder aktualisiert einen API-Key eines Tenants (UPSERT)."""
-    import psycopg
-
-    encrypted, iv = encrypt_value(plaintext)
-    try:
-        with psycopg.connect(_get_db_url()) as conn:
-            with conn.cursor() as cur:
-                cur.execute(
-                    """
-                    INSERT INTO shared.tenant_api_keys
-                        (tenant_id, key_name, encrypted_value, iv)
-                    VALUES (%s, %s, %s, %s)
-                    ON CONFLICT (tenant_id, key_name)
-                    DO UPDATE SET
-                        encrypted_value = EXCLUDED.encrypted_value,
-                        iv              = EXCLUDED.iv,
-                        updated_at      = NOW()
-                    """,
-                    (tenant_id, key_name, encrypted, iv),
-                )
-            conn.commit()
-        logger.info(f"API-Key gespeichert: tenant={tenant_id}, key={key_name}")
-    except Exception as exc:
-        logger.error(f"API-Key UPSERT fehlgeschlagen [{tenant_id}/{key_name}]: {exc}")
-        raise
-
-
-def delete_tenant_api_key(tenant_id: str, key_name: str) -> bool:
-    """Löscht einen API-Key. Gibt True zurück wenn etwas gelöscht wurde."""
-    import psycopg
-
-    try:
-        with psycopg.connect(_get_db_url()) as conn:
-            with conn.cursor() as cur:
-                cur.execute(
-                    "DELETE FROM shared.tenant_api_keys WHERE tenant_id = %s AND key_name = %s",
-                    (tenant_id, key_name),
-                )
-                deleted = cur.rowcount > 0
-            conn.commit()
-        return deleted
-    except Exception as exc:
-        logger.error(f"API-Key DELETE fehlgeschlagen [{tenant_id}/{key_name}]: {exc}")
-        raise
-
-
-def get_tenant_usage(tenant_id: str, plan: str) -> List[Dict[str, object]]:
-    """Gibt Monatsverbrauch + Limits für einen Tenant zurück."""
-    import psycopg
-    import psycopg.rows
-
-    try:
-        with psycopg.connect(_get_db_url()) as conn:
-            with conn.cursor(row_factory=psycopg.rows.dict_row) as cur:
-                cur.execute(
-                    """
-                    SELECT
-                        ul.service,
-                        ul.metric,
-                        COALESCE(SUM(ud.value), 0)::INT AS current,
-                        ul.monthly_max                  AS limit
-                    FROM   shared.usage_limits ul
-                    LEFT   JOIN shared.usage_daily ud
-                           ON  ud.tenant_id = %s
-                           AND ud.service   = ul.service
-                           AND ud.metric    = ul.metric
-                           AND ud.date >= date_trunc('month', CURRENT_DATE)
-                    WHERE  ul.plan = %s
-                    GROUP  BY ul.service, ul.metric, ul.monthly_max
-                    ORDER  BY ul.service, ul.metric
-                    """,
-                    (tenant_id, plan),
-                )
-                return [dict(r) for r in cur.fetchall()]
-    except Exception as exc:
-        logger.error(f"Usage-Abfrage fehlgeschlagen [{tenant_id}]: {exc}")
-        return []
-
-
 def list_tenant_api_keys_masked(tenant_id: str) -> List[Dict[str, object]]:
-    """Gibt API-Keys mit maskierten Werten zurück."""
-    import psycopg
-    import psycopg.rows
-
     try:
-        with psycopg.connect(_get_db_url()) as conn:
-            with conn.cursor(row_factory=psycopg.rows.dict_row) as cur:
-                cur.execute(
-                    """
-                    SELECT key_name, encrypted_value, iv
-                    FROM   shared.tenant_api_keys
-                    WHERE  tenant_id = %s
-                    ORDER  BY key_name
-                    """,
-                    (tenant_id,),
-                )
-                result = []
-                for kr in cur.fetchall():
-                    try:
-                        plain = decrypt_value(bytes(kr["encrypted_value"]), bytes(kr["iv"]))
-                        masked = _mask_value(plain)
-                    except Exception:
-                        masked = "****"
-                    result.append({"key_name": kr["key_name"], "masked": masked})
-                return result
+        conn = _get_conn()
+        cursor = conn.cursor()
+        cursor.execute("SELECT key_name, encrypted_value, iv FROM tenant_api_keys WHERE tenant_id = ?", (tenant_id,))
+        result = []
+        for kr in cursor.fetchall():
+            try:
+                plain = decrypt_value(kr["encrypted_value"], kr["iv"])
+                masked = _mask_value(plain)
+            except:
+                masked = "****"
+            result.append({"key_name": kr["key_name"], "masked": masked})
+        conn.close()
+        return result
     except Exception as exc:
         logger.error(f"API-Key-Liste fehlgeschlagen [{tenant_id}]: {exc}")
         return []
+
+def delete_tenant_api_key(tenant_id: str, key_name: str) -> bool:
+    """Löscht einen API-Key für einen Tenant."""
+    try:
+        conn = _get_conn()
+        cursor = conn.cursor()
+        cursor.execute(
+            "DELETE FROM tenant_api_keys WHERE tenant_id = ? AND key_name = ?", 
+            (tenant_id, key_name)
+        )
+        conn.commit()
+        success = cursor.rowcount > 0
+        conn.close()
+        return success
+    except Exception as exc:
+        logger.error(f"API-Key-Löschen fehlgeschlagen [{tenant_id}, {key_name}]: {exc}")
+        return False
+
+def get_tenant_usage(tenant_id: str) -> Dict[str, object]:
+    """Berechnet die Nutzung für einen Tenant (Projekte, Simulationen)."""
+    try:
+        # Pfad zur data.db des Tenants ermitteln
+        # Wir müssen den schema_name kennen um den Ordner zu finden
+        conn = _get_conn()
+        cursor = conn.cursor()
+        cursor.execute("SELECT schema_name FROM tenants WHERE id = ?", (tenant_id,))
+        row = cursor.fetchone()
+        conn.close()
+        
+        if not row:
+            return {"projects_count": 0, "simulations_count": 0}
+            
+        # Wir nutzen den Standard-Pfad: uploads/tenants/{tenant_id}/data.db
+        # Da wir im Shared-DB-Kontext sind, ist tenant_id hier die interne ID
+        db_path = os.path.join(Config.UPLOAD_FOLDER, 'tenants', tenant_id, 'data.db')
+        
+        if not os.path.exists(db_path):
+            return {"projects_count": 0, "simulations_count": 0}
+            
+        t_conn = sqlite3.connect(db_path)
+        t_cursor = t_conn.cursor()
+        
+        # Projekte zählen
+        try:
+            t_cursor.execute("SELECT COUNT(*) FROM projects")
+            projects_count = t_cursor.fetchone()[0]
+        except:
+            projects_count = 0
+            
+        # Simulationen zählen
+        try:
+            t_cursor.execute("SELECT COUNT(*) FROM simulation_runs")
+            simulations_count = t_cursor.fetchone()[0]
+        except:
+            simulations_count = 0
+            
+        t_conn.close()
+        
+        return {
+            "projects_count": projects_count,
+            "simulations_count": simulations_count,
+            "storage_used_bytes": os.path.getsize(db_path) if os.path.exists(db_path) else 0
+        }
+    except Exception as exc:
+        logger.error(f"Verbrauch-Abfrage fehlgeschlagen [{tenant_id}]: {exc}")
+        return {"projects_count": 0, "simulations_count": 0, "error": str(exc)}

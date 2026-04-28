@@ -40,6 +40,7 @@
         <GraphPanel 
           :graphData="graphData"
           :loading="graphLoading"
+          :error="graphError"
           :currentPhase="2"
           @refresh="refreshGraph"
           @toggle-maximize="toggleMaximize('graph')"
@@ -87,6 +88,7 @@ const currentSimulationId = ref(route.params.simulationId)
 const projectData = ref(null)
 const graphData = ref(null)
 const graphLoading = ref(false)
+const graphError = ref('')
 const systemLogs = ref([])
 const currentStatus = ref('processing') // processing | completed | error
 
@@ -271,9 +273,14 @@ const loadGraph = async (graphId) => {
     const res = await getGraphData(graphId)
     if (res.success) {
       graphData.value = res.data
+      graphError.value = ''
       addLog('Graphdaten erfolgreich geladen')
+    } else {
+      graphError.value = res.error
+      addLog(`Graphdaten Fehler: ${res.error}`)
     }
   } catch (err) {
+    graphError.value = err.message
     addLog(`Graphdaten konnten nicht geladen werden: ${err.message}`)
   } finally {
     graphLoading.value = false
@@ -302,7 +309,8 @@ onMounted(async () => {
   height: 100vh;
   display: flex;
   flex-direction: column;
-  background: #FFF;
+  background: var(--bg-gradient);
+  color: var(--text-primary);
   overflow: hidden;
   font-family: 'Space Grotesk', 'Noto Sans SC', system-ui, sans-serif;
 }
@@ -310,12 +318,13 @@ onMounted(async () => {
 /* Header */
 .app-header {
   height: 60px;
-  border-bottom: 1px solid #EAEAEA;
+  border-bottom: 1px solid var(--glass-border);
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 0 24px;
-  background: #FFF;
+  background: rgba(10, 15, 26, 0.8);
+  backdrop-filter: blur(10px);
   z-index: 100;
   position: relative;
 }
@@ -381,7 +390,7 @@ onMounted(async () => {
 
 .step-name {
   font-weight: 700;
-  color: #000;
+  color: var(--text-primary);
 }
 
 .step-divider {

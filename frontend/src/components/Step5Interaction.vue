@@ -58,7 +58,7 @@
                       <path d="M12 2a10 10 0 0 1 10 10" stroke-width="4" stroke="#4B5563" stroke-linecap="round"></path>
                     </svg>
                   </div>
-                  <span class="loading-text">正在生成{{ section.title }}...</span>
+                  <span class="loading-text">Wird generiert: {{ section.title }}...</span>
                 </div>
               </div>
             </div>
@@ -98,7 +98,7 @@
               <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path>
               </svg>
-              <span>与Report Agent对话</span>
+              <span>Mit Report Agent chatten</span>
             </button>
             <div class="agent-dropdown" v-if="profiles.length > 0">
               <button 
@@ -110,13 +110,13 @@
                   <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
                   <circle cx="12" cy="7" r="4"></circle>
                 </svg>
-                <span>{{ selectedAgent ? selectedAgent.username : '与世界中任意个体对话' }}</span>
+                <span>{{ selectedAgent ? selectedAgent.username : 'Mit beliebiger Entität chatten' }}</span>
                 <svg class="dropdown-arrow" :class="{ open: showAgentDropdown }" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2">
                   <polyline points="6 9 12 15 18 9"></polyline>
                 </svg>
               </button>
               <div v-if="showAgentDropdown" class="dropdown-menu">
-                <div class="dropdown-header">选择对话对象</div>
+                <div class="dropdown-header">Gesprächspartner auswählen</div>
                 <div 
                   v-for="(agent, idx) in profiles" 
                   :key="idx"
@@ -126,7 +126,7 @@
                   <div class="agent-avatar">{{ (agent.username || 'A')[0] }}</div>
                   <div class="agent-info">
                     <span class="agent-name">{{ agent.username }}</span>
-                    <span class="agent-role">{{ agent.profession || '未知职业' }}</span>
+                    <span class="agent-role">{{ agent.profession || 'Unbekannte Beruf' }}</span>
                   </div>
                 </div>
               </div>
@@ -141,7 +141,7 @@
                 <path d="M9 11l3 3L22 4"></path>
                 <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>
               </svg>
-              <span>发送问卷调查到世界中</span>
+              <span>Umfrage an die Welt senden</span>
             </button>
           </div>
         </div>
@@ -155,7 +155,7 @@
               <div class="tools-card-avatar">R</div>
               <div class="tools-card-info">
                 <div class="tools-card-name">Report Agent - Chat</div>
-                <div class="tools-card-subtitle">报告生成智能体的快速对话版本，可调用 4 种专业工具，拥有MiroFish的完整记忆</div>
+                <div class="tools-card-subtitle">Schnellchat-Version des Report-Agenten mit 4 professionellen Tools und vollständigem MiroFish-Gedächtnis</div>
               </div>
               <button class="tools-card-toggle" @click="showToolsDetail = !showToolsDetail">
                 <svg :class="{ 'is-expanded': showToolsDetail }" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
@@ -172,8 +172,8 @@
                     </svg>
                   </div>
                   <div class="tool-content">
-                    <div class="tool-name">InsightForge 深度归因</div>
-                    <div class="tool-desc">对齐现实世界种子数据与模拟环境状态，结合Global/Local Memory机制，提供跨时空的深度归因分析</div>
+                    <div class="tool-name">InsightForge Tiefenattribution</div>
+                    <div class="tool-desc">Gleicht Realitäts-Seed-Daten mit Simulationsumgebungszuständen ab und bietet zeitübergreifende Tiefenattributionsanalyse</div>
                   </div>
                 </div>
                 <div class="tool-item tool-blue">
@@ -184,8 +184,8 @@
                     </svg>
                   </div>
                   <div class="tool-content">
-                    <div class="tool-name">PanoramaSearch 全景追踪</div>
-                    <div class="tool-desc">基于图结构的广度遍历算法，重构事件传播路径，捕获全量信息流动的拓扑结构</div>
+                    <div class="tool-name">PanoramaSearch Panoram tracking</div>
+                    <div class="tool-desc">Rekonstruiert Ereignisverbreitungspfade durch Graph- breadth-first Algorithmus und erfasst die topologische Struktur des vollständigen Informationsflusses</div>
                   </div>
                 </div>
                 <div class="tool-item tool-orange">
@@ -195,8 +195,8 @@
                     </svg>
                   </div>
                   <div class="tool-content">
-                    <div class="tool-name">QuickSearch 快速检索</div>
-                    <div class="tool-desc">基于 GraphRAG 的即时查询接口，优化索引效率，用于快速提取具体的节点属性与离散事实</div>
+                    <div class="tool-name">QuickSearch Schnellsuche</div>
+                    <div class="tool-desc">Sofortige Abfrage-Schnittstelle basierend auf GraphRAG für schnelle Extraktion von Knotenattributen und diskreten Fakten</div>
                   </div>
                 </div>
                 <div class="tool-item tool-green">
@@ -208,8 +208,8 @@
                     </svg>
                   </div>
                   <div class="tool-content">
-                    <div class="tool-name">InterviewSubAgent 虚拟访谈</div>
-                    <div class="tool-desc">自主式访谈，能够并行与模拟世界中个体进行多轮对话，采集非结构化的观点数据与心理状态</div>
+                    <div class="tool-name">InterviewSubAgent Virtuelles Interview</div>
+                    <div class="tool-desc">Autonome Interviews mit mehreren Runden, die parallel mit Individuen in der Simulationswelt geführt werden, sammeln unstrukturierte Meinungsdaten und psychische Zustände</div>
                   </div>
                 </div>
               </div>
@@ -224,7 +224,7 @@
                 <div class="profile-card-name">{{ selectedAgent.username }}</div>
                 <div class="profile-card-meta">
                   <span v-if="selectedAgent.name" class="profile-card-handle">@{{ selectedAgent.name }}</span>
-                  <span class="profile-card-profession">{{ selectedAgent.profession || '未知职业' }}</span>
+                  <span class="profile-card-profession">{{ selectedAgent.profession || 'Unbekannte Beruf' }}</span>
                 </div>
               </div>
               <button class="profile-card-toggle" @click="showFullProfile = !showFullProfile">
@@ -235,7 +235,7 @@
             </div>
             <div v-if="showFullProfile && selectedAgent.bio" class="profile-card-body">
               <div class="profile-card-bio">
-                <div class="profile-card-label">简介</div>
+                <div class="profile-card-label">Biografie</div>
                 <p>{{ selectedAgent.bio }}</p>
               </div>
             </div>
@@ -250,7 +250,7 @@
                 </svg>
               </div>
               <p class="empty-text">
-                {{ chatTarget === 'report_agent' ? '与 Report Agent 对话，深入了解报告内容' : '与模拟个体对话，了解他们的观点' }}
+                {{ chatTarget === 'report_agent' ? 'Mit Report Agent chatten, um den Bericht zu verstehen' : 'Mit simuliertem Individuum chatten, um seine Meinungen zu verstehen' }}
               </p>
             </div>
             <div 
@@ -292,7 +292,7 @@
             <textarea 
               v-model="chatInput"
               class="chat-input"
-              placeholder="输入您的问题..."
+              placeholder="Frage eingeben..."
               @keydown.enter.exact.prevent="sendMessage"
               :disabled="isSending || (!selectedAgent && chatTarget === 'agent')"
               rows="1"
@@ -317,8 +317,8 @@
           <div class="survey-setup">
             <div class="setup-section">
               <div class="section-header">
-                <span class="section-title">选择调查对象</span>
-                <span class="selection-count">已选 {{ selectedAgents.size }} / {{ profiles.length }}</span>
+                <span class="section-title">Zielgruppe auswählen</span>
+                <span class="selection-count">Ausgewählt: {{ selectedAgents.size }} / {{ profiles.length }}</span>
               </div>
               <div class="agents-grid">
                 <label 
@@ -335,7 +335,7 @@
                   <div class="checkbox-avatar">{{ (agent.username || 'A')[0] }}</div>
                   <div class="checkbox-info">
                     <span class="checkbox-name">{{ agent.username }}</span>
-                    <span class="checkbox-role">{{ agent.profession || '未知职业' }}</span>
+                    <span class="checkbox-role">{{ agent.profession || 'Unbekannte Rolle' }}</span>
                   </div>
                   <div class="checkbox-indicator">
                     <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="3">
@@ -345,20 +345,20 @@
                 </label>
               </div>
               <div class="selection-actions">
-                <button class="action-link" @click="selectAllAgents">全选</button>
+                <button class="action-link" @click="selectAllAgents">Alle auswählen</button>
                 <span class="action-divider">|</span>
-                <button class="action-link" @click="clearAgentSelection">清空</button>
+                <button class="action-link" @click="clearAgentSelection">Leeren</button>
               </div>
             </div>
 
             <div class="setup-section">
               <div class="section-header">
-                <span class="section-title">问卷问题</span>
+                <span class="section-title">Fragebogen-Frage</span>
               </div>
               <textarea 
                 v-model="surveyQuestion"
                 class="survey-input"
-                placeholder="输入您想问所有被选中对象的问题..."
+                placeholder="Frage an alle ausgewählten Personen eingeben..."
                 rows="3"
               ></textarea>
             </div>
@@ -369,15 +369,15 @@
               @click="submitSurvey"
             >
               <span v-if="isSurveying" class="loading-spinner"></span>
-              <span v-else>发送问卷</span>
+              <span v-else>Fragebogen senden</span>
             </button>
           </div>
 
           <!-- Survey Results -->
           <div v-if="surveyResults.length > 0" class="survey-results">
             <div class="results-header">
-              <span class="results-title">调查结果</span>
-              <span class="results-count">{{ surveyResults.length }} 条回复</span>
+              <span class="results-title">Umfrageergebnisse</span>
+              <span class="results-count">{{ surveyResults.length }} Antworten</span>
             </div>
             <div class="results-list">
               <div 
@@ -389,7 +389,7 @@
                   <div class="result-avatar">{{ (result.agent_name || 'A')[0] }}</div>
                   <div class="result-info">
                     <span class="result-name">{{ result.agent_name }}</span>
-                    <span class="result-role">{{ result.profession || '未知职业' }}</span>
+                    <span class="result-role">{{ result.profession || 'Unbekannte Rolle' }}</span>
                   </div>
                 </div>
                 <div class="result-question">
@@ -411,551 +411,618 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
-import { chatWithReport, getReport, getAgentLog } from '../api/report'
-import { interviewAgents, getSimulationProfilesRealtime } from '../api/simulation'
+import { nextTick, onMounted, onUnmounted, ref, watch } from "vue";
+import { chatWithReport, getAgentLog, getReport } from "../api/report";
+import {
+  getSimulationProfilesRealtime,
+  interviewAgents,
+} from "../api/simulation";
 
 const props = defineProps({
   reportId: String,
-  simulationId: String
-})
+  simulationId: String,
+});
 
-const emit = defineEmits(['add-log', 'update-status'])
+const emit = defineEmits(["add-log", "update-status"]);
 
 // State
-const activeTab = ref('chat')
-const chatTarget = ref('report_agent')
-const showAgentDropdown = ref(false)
-const selectedAgent = ref(null)
-const selectedAgentIndex = ref(null)
-const showFullProfile = ref(true)
-const showToolsDetail = ref(true)
+const activeTab = ref("chat");
+const chatTarget = ref("report_agent");
+const showAgentDropdown = ref(false);
+const selectedAgent = ref(null);
+const selectedAgentIndex = ref(null);
+const showFullProfile = ref(true);
+const showToolsDetail = ref(true);
 
 // Chat State
-const chatInput = ref('')
-const chatHistory = ref([])
-const chatHistoryCache = ref({}) // 缓存所有对话记录: { 'report_agent': [], 'agent_0': [], 'agent_1': [], ... }
-const isSending = ref(false)
-const chatMessages = ref(null)
-const chatInputRef = ref(null)
+const chatInput = ref("");
+const chatHistory = ref([]);
+const chatHistoryCache = ref({}); // 缓存所有对话记录: { 'report_agent': [], 'agent_0': [], 'agent_1': [], ... }
+const isSending = ref(false);
+const chatMessages = ref(null);
+const chatInputRef = ref(null);
 
 // Survey State
-const selectedAgents = ref(new Set())
-const surveyQuestion = ref('')
-const surveyResults = ref([])
-const isSurveying = ref(false)
+const selectedAgents = ref(new Set());
+const surveyQuestion = ref("");
+const surveyResults = ref([]);
+const isSurveying = ref(false);
 
 // Report Data
-const reportOutline = ref(null)
-const generatedSections = ref({})
-const collapsedSections = ref(new Set())
-const currentSectionIndex = ref(null)
-const profiles = ref([])
+const reportOutline = ref(null);
+const generatedSections = ref({});
+const collapsedSections = ref(new Set());
+const currentSectionIndex = ref(null);
+const profiles = ref([]);
 
 // Helper Methods
 const isSectionCompleted = (sectionIndex) => {
-  return !!generatedSections.value[sectionIndex]
-}
+  return !!generatedSections.value[sectionIndex];
+};
 
 // Refs
-const leftPanel = ref(null)
-const rightPanel = ref(null)
+const leftPanel = ref(null);
+const rightPanel = ref(null);
 
 // Methods
 const addLog = (msg) => {
-  emit('add-log', msg)
-}
+  emit("add-log", msg);
+};
 
 const toggleSectionCollapse = (idx) => {
-  if (!generatedSections.value[idx + 1]) return
-  const newSet = new Set(collapsedSections.value)
-  if (newSet.has(idx)) {
-    newSet.delete(idx)
-  } else {
-    newSet.add(idx)
+  if (!generatedSections.value[idx + 1]) {
+    return;
   }
-  collapsedSections.value = newSet
-}
+  const newSet = new Set(collapsedSections.value);
+  if (newSet.has(idx)) {
+    newSet.delete(idx);
+  } else {
+    newSet.add(idx);
+  }
+  collapsedSections.value = newSet;
+};
 
 const selectChatTarget = (target) => {
-  chatTarget.value = target
-  if (target === 'report_agent') {
-    showAgentDropdown.value = false
+  chatTarget.value = target;
+  if (target === "report_agent") {
+    showAgentDropdown.value = false;
   }
-}
+};
 
 // 保存当前对话记录到缓存
 const saveChatHistory = () => {
-  if (chatHistory.value.length === 0) return
-  
-  if (chatTarget.value === 'report_agent') {
-    chatHistoryCache.value['report_agent'] = [...chatHistory.value]
-  } else if (selectedAgentIndex.value !== null) {
-    chatHistoryCache.value[`agent_${selectedAgentIndex.value}`] = [...chatHistory.value]
+  if (chatHistory.value.length === 0) {
+    return;
   }
-}
+
+  if (chatTarget.value === "report_agent") {
+    chatHistoryCache.value["report_agent"] = [...chatHistory.value];
+  } else if (selectedAgentIndex.value !== null) {
+    chatHistoryCache.value[`agent_${selectedAgentIndex.value}`] = [
+      ...chatHistory.value,
+    ];
+  }
+};
 
 const selectReportAgentChat = () => {
   // 保存当前对话记录
-  saveChatHistory()
-  
-  activeTab.value = 'chat'
-  chatTarget.value = 'report_agent'
-  selectedAgent.value = null
-  selectedAgentIndex.value = null
-  showAgentDropdown.value = false
-  
+  saveChatHistory();
+
+  activeTab.value = "chat";
+  chatTarget.value = "report_agent";
+  selectedAgent.value = null;
+  selectedAgentIndex.value = null;
+  showAgentDropdown.value = false;
+
   // 恢复 Report Agent 的对话记录
-  chatHistory.value = chatHistoryCache.value['report_agent'] || []
-}
+  chatHistory.value = chatHistoryCache.value["report_agent"] || [];
+};
 
 const selectSurveyTab = () => {
-  activeTab.value = 'survey'
-  selectedAgent.value = null
-  selectedAgentIndex.value = null
-  showAgentDropdown.value = false
-}
+  activeTab.value = "survey";
+  selectedAgent.value = null;
+  selectedAgentIndex.value = null;
+  showAgentDropdown.value = false;
+};
 
 const toggleAgentDropdown = () => {
-  showAgentDropdown.value = !showAgentDropdown.value
+  showAgentDropdown.value = !showAgentDropdown.value;
   if (showAgentDropdown.value) {
-    activeTab.value = 'chat'
-    chatTarget.value = 'agent'
+    activeTab.value = "chat";
+    chatTarget.value = "agent";
   }
-}
+};
 
 const selectAgent = (agent, idx) => {
   // 保存当前对话记录
-  saveChatHistory()
-  
-  selectedAgent.value = agent
-  selectedAgentIndex.value = idx
-  chatTarget.value = 'agent'
-  showAgentDropdown.value = false
-  
+  saveChatHistory();
+
+  selectedAgent.value = agent;
+  selectedAgentIndex.value = idx;
+  chatTarget.value = "agent";
+  showAgentDropdown.value = false;
+
   // 恢复该 Agent 的对话记录
-  chatHistory.value = chatHistoryCache.value[`agent_${idx}`] || []
-  addLog(`选择对话对象: ${agent.username}`)
-}
+  chatHistory.value = chatHistoryCache.value[`agent_${idx}`] || [];
+  addLog(`选择对话对象: ${agent.username}`);
+};
 
 const formatTime = (timestamp) => {
-  if (!timestamp) return ''
-  try {
-    return new Date(timestamp).toLocaleTimeString('en-US', { 
-      hour12: false, 
-      hour: '2-digit', 
-      minute: '2-digit'
-    })
-  } catch {
-    return ''
+  if (!timestamp) {
+    return "";
   }
-}
+  try {
+    return new Date(timestamp).toLocaleTimeString("en-US", {
+      hour12: false,
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  } catch {
+    return "";
+  }
+};
 
 const renderMarkdown = (content) => {
-  if (!content) return ''
-  
-  let processedContent = content.replace(/^##\s+.+\n+/, '')
-  let html = processedContent.replace(/```(\w*)\n([\s\S]*?)```/g, '<pre class="code-block"><code>$2</code></pre>')
-  html = html.replace(/`([^`]+)`/g, '<code class="inline-code">$1</code>')
-  html = html.replace(/^#### (.+)$/gm, '<h5 class="md-h5">$1</h5>')
-  html = html.replace(/^### (.+)$/gm, '<h4 class="md-h4">$1</h4>')
-  html = html.replace(/^## (.+)$/gm, '<h3 class="md-h3">$1</h3>')
-  html = html.replace(/^# (.+)$/gm, '<h2 class="md-h2">$1</h2>')
-  html = html.replace(/^> (.+)$/gm, '<blockquote class="md-quote">$1</blockquote>')
-  
+  if (!content) {
+    return "";
+  }
+
+  let processedContent = content.replace(/^##\s+.+\n+/, "");
+  let html = processedContent.replace(
+    /```(\w*)\n([\s\S]*?)```/g,
+    '<pre class="code-block"><code>$2</code></pre>'
+  );
+  html = html.replace(/`([^`]+)`/g, '<code class="inline-code">$1</code>');
+  html = html.replace(/^#### (.+)$/gm, '<h5 class="md-h5">$1</h5>');
+  html = html.replace(/^### (.+)$/gm, '<h4 class="md-h4">$1</h4>');
+  html = html.replace(/^## (.+)$/gm, '<h3 class="md-h3">$1</h3>');
+  html = html.replace(/^# (.+)$/gm, '<h2 class="md-h2">$1</h2>');
+  html = html.replace(
+    /^> (.+)$/gm,
+    '<blockquote class="md-quote">$1</blockquote>'
+  );
+
   // 处理列表 - 支持子列表
   html = html.replace(/^(\s*)- (.+)$/gm, (match, indent, text) => {
-    const level = Math.floor(indent.length / 2)
-    return `<li class="md-li" data-level="${level}">${text}</li>`
-  })
+    const level = Math.floor(indent.length / 2);
+    return `<li class="md-li" data-level="${level}">${text}</li>`;
+  });
   html = html.replace(/^(\s*)(\d+)\. (.+)$/gm, (match, indent, num, text) => {
-    const level = Math.floor(indent.length / 2)
-    return `<li class="md-oli" data-level="${level}">${text}</li>`
-  })
-  
+    const level = Math.floor(indent.length / 2);
+    return `<li class="md-oli" data-level="${level}">${text}</li>`;
+  });
+
   // 包装无序列表
-  html = html.replace(/(<li class="md-li"[^>]*>.*?<\/li>\s*)+/g, '<ul class="md-ul">$&</ul>')
+  html = html.replace(
+    /(<li class="md-li"[^>]*>.*?<\/li>\s*)+/g,
+    '<ul class="md-ul">$&</ul>'
+  );
   // 包装有序列表
-  html = html.replace(/(<li class="md-oli"[^>]*>.*?<\/li>\s*)+/g, '<ol class="md-ol">$&</ol>')
-  
+  html = html.replace(
+    /(<li class="md-oli"[^>]*>.*?<\/li>\s*)+/g,
+    '<ol class="md-ol">$&</ol>'
+  );
+
   // 清理列表项之间的所有空白
-  html = html.replace(/<\/li>\s+<li/g, '</li><li')
+  html = html.replace(/<\/li>\s+<li/g, "</li><li");
   // 清理列表开始标签后的空白
-  html = html.replace(/<ul class="md-ul">\s+/g, '<ul class="md-ul">')
-  html = html.replace(/<ol class="md-ol">\s+/g, '<ol class="md-ol">')
+  html = html.replace(/<ul class="md-ul">\s+/g, '<ul class="md-ul">');
+  html = html.replace(/<ol class="md-ol">\s+/g, '<ol class="md-ol">');
   // 清理列表结束标签前的空白
-  html = html.replace(/\s+<\/ul>/g, '</ul>')
-  html = html.replace(/\s+<\/ol>/g, '</ol>')
-  
-  html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-  html = html.replace(/\*(.+?)\*/g, '<em>$1</em>')
-  html = html.replace(/_(.+?)_/g, '<em>$1</em>')
-  html = html.replace(/^---$/gm, '<hr class="md-hr">')
-  html = html.replace(/\n\n/g, '</p><p class="md-p">')
-  html = html.replace(/\n/g, '<br>')
-  html = '<p class="md-p">' + html + '</p>'
-  html = html.replace(/<p class="md-p"><\/p>/g, '')
-  html = html.replace(/<p class="md-p">(<h[2-5])/g, '$1')
-  html = html.replace(/(<\/h[2-5]>)<\/p>/g, '$1')
-  html = html.replace(/<p class="md-p">(<ul|<ol|<blockquote|<pre|<hr)/g, '$1')
-  html = html.replace(/(<\/ul>|<\/ol>|<\/blockquote>|<\/pre>)<\/p>/g, '$1')
+  html = html.replace(/\s+<\/ul>/g, "</ul>");
+  html = html.replace(/\s+<\/ol>/g, "</ol>");
+
+  html = html.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
+  html = html.replace(/\*(.+?)\*/g, "<em>$1</em>");
+  html = html.replace(/_(.+?)_/g, "<em>$1</em>");
+  html = html.replace(/^---$/gm, '<hr class="md-hr">');
+  html = html.replace(/\n\n/g, '</p><p class="md-p">');
+  html = html.replace(/\n/g, "<br>");
+  html = '<p class="md-p">' + html + "</p>";
+  html = html.replace(/<p class="md-p"><\/p>/g, "");
+  html = html.replace(/<p class="md-p">(<h[2-5])/g, "$1");
+  html = html.replace(/(<\/h[2-5]>)<\/p>/g, "$1");
+  html = html.replace(/<p class="md-p">(<ul|<ol|<blockquote|<pre|<hr)/g, "$1");
+  html = html.replace(/(<\/ul>|<\/ol>|<\/blockquote>|<\/pre>)<\/p>/g, "$1");
   // 清理块级元素前后的 <br> 标签
-  html = html.replace(/<br>\s*(<ul|<ol|<blockquote)/g, '$1')
-  html = html.replace(/(<\/ul>|<\/ol>|<\/blockquote>)\s*<br>/g, '$1')
+  html = html.replace(/<br>\s*(<ul|<ol|<blockquote)/g, "$1");
+  html = html.replace(/(<\/ul>|<\/ol>|<\/blockquote>)\s*<br>/g, "$1");
   // 清理 <p><br> 紧跟块级元素的情况（多余空行导致）
-  html = html.replace(/<p class="md-p">(<br>\s*)+(<ul|<ol|<blockquote|<pre|<hr)/g, '$2')
+  html = html.replace(
+    /<p class="md-p">(<br>\s*)+(<ul|<ol|<blockquote|<pre|<hr)/g,
+    "$2"
+  );
   // 清理连续的 <br> 标签
-  html = html.replace(/(<br>\s*){2,}/g, '<br>')
+  html = html.replace(/(<br>\s*){2,}/g, "<br>");
   // 清理块级元素后紧跟的段落开始标签前的 <br>
-  html = html.replace(/(<\/ol>|<\/ul>|<\/blockquote>)<br>(<p|<div)/g, '$1$2')
+  html = html.replace(/(<\/ol>|<\/ul>|<\/blockquote>)<br>(<p|<div)/g, "$1$2");
 
   // 修复非连续有序列表的编号：当单项 <ol> 被段落内容隔开时，保持编号递增
-  const tokens = html.split(/(<ol class="md-ol">(?:<li class="md-oli"[^>]*>[\s\S]*?<\/li>)+<\/ol>)/g)
-  let olCounter = 0
-  let inSequence = false
+  const tokens = html.split(
+    /(<ol class="md-ol">(?:<li class="md-oli"[^>]*>[\s\S]*?<\/li>)+<\/ol>)/g
+  );
+  let olCounter = 0;
+  let inSequence = false;
   for (let i = 0; i < tokens.length; i++) {
     if (tokens[i].startsWith('<ol class="md-ol">')) {
-      const liCount = (tokens[i].match(/<li class="md-oli"/g) || []).length
+      const liCount = (tokens[i].match(/<li class="md-oli"/g) || []).length;
       if (liCount === 1) {
-        olCounter++
+        olCounter++;
         if (olCounter > 1) {
-          tokens[i] = tokens[i].replace('<ol class="md-ol">', `<ol class="md-ol" start="${olCounter}">`)
+          tokens[i] = tokens[i].replace(
+            '<ol class="md-ol">',
+            `<ol class="md-ol" start="${olCounter}">`
+          );
         }
-        inSequence = true
+        inSequence = true;
       } else {
-        olCounter = 0
-        inSequence = false
+        olCounter = 0;
+        inSequence = false;
       }
-    } else if (inSequence) {
-      if (/<h[2-5]/.test(tokens[i])) {
-        olCounter = 0
-        inSequence = false
-      }
+    } else if (inSequence && /<h[2-5]/.test(tokens[i])) {
+      olCounter = 0;
+      inSequence = false;
     }
   }
-  html = tokens.join('')
+  html = tokens.join("");
 
-  return html
-}
+  return html;
+};
 
 // Chat Methods
 const sendMessage = async () => {
-  if (!chatInput.value.trim() || isSending.value) return
-  
-  const message = chatInput.value.trim()
-  chatInput.value = ''
-  
+  if (!chatInput.value.trim() || isSending.value) {
+    return;
+  }
+
+  const message = chatInput.value.trim();
+  chatInput.value = "";
+
   // Add user message
   chatHistory.value.push({
-    role: 'user',
+    role: "user",
     content: message,
-    timestamp: new Date().toISOString()
-  })
-  
-  scrollToBottom()
-  isSending.value = true
-  
+    timestamp: new Date().toISOString(),
+  });
+
+  scrollToBottom();
+  isSending.value = true;
+
   try {
-    if (chatTarget.value === 'report_agent') {
-      await sendToReportAgent(message)
+    if (chatTarget.value === "report_agent") {
+      await sendToReportAgent(message);
     } else {
-      await sendToAgent(message)
+      await sendToAgent(message);
     }
   } catch (err) {
-    addLog(`发送失败: ${err.message}`)
+    addLog(`发送失败: ${err.message}`);
     chatHistory.value.push({
-      role: 'assistant',
+      role: "assistant",
       content: `抱歉，发生了错误: ${err.message}`,
-      timestamp: new Date().toISOString()
-    })
+      timestamp: new Date().toISOString(),
+    });
   } finally {
-    isSending.value = false
-    scrollToBottom()
+    isSending.value = false;
+    scrollToBottom();
     // 自动保存对话记录到缓存
-    saveChatHistory()
+    saveChatHistory();
   }
-}
+};
 
 const sendToReportAgent = async (message) => {
-  addLog(`向 Report Agent 发送: ${message.substring(0, 50)}...`)
-  
+  addLog(`向 Report Agent 发送: ${message.substring(0, 50)}...`);
+
   // Build chat history for API
   const historyForApi = chatHistory.value
-    .filter(msg => msg.role !== 'user' || msg.content !== message)
+    .filter((msg) => msg.role !== "user" || msg.content !== message)
     .slice(-10) // Keep last 10 messages
-    .map(msg => ({
+    .map((msg) => ({
       role: msg.role,
-      content: msg.content
-    }))
-  
+      content: msg.content,
+    }));
+
   const res = await chatWithReport({
     simulation_id: props.simulationId,
-    message: message,
-    chat_history: historyForApi
-  })
-  
+    message,
+    chat_history: historyForApi,
+  });
+
   if (res.success && res.data) {
     chatHistory.value.push({
-      role: 'assistant',
-      content: res.data.response || res.data.answer || '无响应',
-      timestamp: new Date().toISOString()
-    })
-    addLog('Report Agent 已回复')
+      role: "assistant",
+      content: res.data.response || res.data.answer || "无响应",
+      timestamp: new Date().toISOString(),
+    });
+    addLog("Report Agent 已回复");
   } else {
-    throw new Error(res.error || '请求失败')
+    throw new Error(res.error || "请求失败");
   }
-}
+};
 
 const sendToAgent = async (message) => {
   if (!selectedAgent.value || selectedAgentIndex.value === null) {
-    throw new Error('请先选择一个模拟个体')
+    throw new Error("请先选择一个模拟个体");
   }
-  
-  addLog(`向 ${selectedAgent.value.username} 发送: ${message.substring(0, 50)}...`)
-  
+
+  addLog(
+    `向 ${selectedAgent.value.username} 发送: ${message.substring(0, 50)}...`
+  );
+
   // Build prompt with chat history
-  let prompt = message
+  let prompt = message;
   if (chatHistory.value.length > 1) {
     const historyContext = chatHistory.value
-      .filter(msg => msg.content !== message)
+      .filter((msg) => msg.content !== message)
       .slice(-6)
-      .map(msg => `${msg.role === 'user' ? '提问者' : '你'}：${msg.content}`)
-      .join('\n')
-    prompt = `以下是我们之前的对话：\n${historyContext}\n\n现在我的新问题是：${message}`
+      .map((msg) => `${msg.role === "user" ? "提问者" : "你"}：${msg.content}`)
+      .join("\n");
+    prompt = `以下是我们之前的对话：\n${historyContext}\n\n现在我的新问题是：${message}`;
   }
-  
+
   const res = await interviewAgents({
     simulation_id: props.simulationId,
-    interviews: [{
-      agent_id: selectedAgentIndex.value,
-      prompt: prompt
-    }]
-  })
-  
+    interviews: [
+      {
+        agent_id: selectedAgentIndex.value,
+        prompt,
+      },
+    ],
+  });
+
   if (res.success && res.data) {
     // 正确的数据路径: res.data.result.results 是一个对象字典
     // 格式: {"twitter_0": {...}, "reddit_0": {...}} 或单平台 {"reddit_0": {...}}
-    const resultData = res.data.result || res.data
-    const resultsDict = resultData.results || resultData
-    
+    const resultData = res.data.result || res.data;
+    const resultsDict = resultData.results || resultData;
+
     // 将对象字典转换为数组，优先获取 reddit 平台的回复
-    let responseContent = null
-    const agentId = selectedAgentIndex.value
-    
-    if (typeof resultsDict === 'object' && !Array.isArray(resultsDict)) {
+    let responseContent = null;
+    const agentId = selectedAgentIndex.value;
+
+    if (typeof resultsDict === "object" && !Array.isArray(resultsDict)) {
       // 优先使用 reddit 平台回复，其次 twitter
-      const redditKey = `reddit_${agentId}`
-      const twitterKey = `twitter_${agentId}`
-      const agentResult = resultsDict[redditKey] || resultsDict[twitterKey] || Object.values(resultsDict)[0]
+      const redditKey = `reddit_${agentId}`;
+      const twitterKey = `twitter_${agentId}`;
+      const agentResult =
+        resultsDict[redditKey] ||
+        resultsDict[twitterKey] ||
+        Object.values(resultsDict)[0];
       if (agentResult) {
-        responseContent = agentResult.response || agentResult.answer
+        responseContent = agentResult.response || agentResult.answer;
       }
     } else if (Array.isArray(resultsDict) && resultsDict.length > 0) {
       // 兼容数组格式
-      responseContent = resultsDict[0].response || resultsDict[0].answer
+      responseContent = resultsDict[0].response || resultsDict[0].answer;
     }
-    
+
     if (responseContent) {
       chatHistory.value.push({
-        role: 'assistant',
+        role: "assistant",
         content: responseContent,
-        timestamp: new Date().toISOString()
-      })
-      addLog(`${selectedAgent.value.username} 已回复`)
+        timestamp: new Date().toISOString(),
+      });
+      addLog(`${selectedAgent.value.username} 已回复`);
     } else {
-      throw new Error('无响应数据')
+      throw new Error("无响应数据");
     }
   } else {
-    throw new Error(res.error || '请求失败')
+    throw new Error(res.error || "请求失败");
   }
-}
+};
 
 const scrollToBottom = () => {
   nextTick(() => {
     if (chatMessages.value) {
-      chatMessages.value.scrollTop = chatMessages.value.scrollHeight
+      chatMessages.value.scrollTop = chatMessages.value.scrollHeight;
     }
-  })
-}
+  });
+};
 
 // Survey Methods
 const toggleAgentSelection = (idx) => {
-  const newSet = new Set(selectedAgents.value)
+  const newSet = new Set(selectedAgents.value);
   if (newSet.has(idx)) {
-    newSet.delete(idx)
+    newSet.delete(idx);
   } else {
-    newSet.add(idx)
+    newSet.add(idx);
   }
-  selectedAgents.value = newSet
-}
+  selectedAgents.value = newSet;
+};
 
 const selectAllAgents = () => {
-  const newSet = new Set()
-  profiles.value.forEach((_, idx) => newSet.add(idx))
-  selectedAgents.value = newSet
-}
+  const newSet = new Set();
+  profiles.value.forEach((_, idx) => newSet.add(idx));
+  selectedAgents.value = newSet;
+};
 
 const clearAgentSelection = () => {
-  selectedAgents.value = new Set()
-}
+  selectedAgents.value = new Set();
+};
 
 const submitSurvey = async () => {
-  if (selectedAgents.value.size === 0 || !surveyQuestion.value.trim()) return
-  
-  isSurveying.value = true
-  addLog(`发送问卷给 ${selectedAgents.value.size} 个对象...`)
-  
+  if (selectedAgents.value.size === 0 || !surveyQuestion.value.trim()) {
+    return;
+  }
+
+  isSurveying.value = true;
+  addLog(`发送问卷给 ${selectedAgents.value.size} 个对象...`);
+
   try {
-    const interviews = Array.from(selectedAgents.value).map(idx => ({
+    const interviews = Array.from(selectedAgents.value).map((idx) => ({
       agent_id: idx,
-      prompt: surveyQuestion.value.trim()
-    }))
-    
+      prompt: surveyQuestion.value.trim(),
+    }));
+
     const res = await interviewAgents({
       simulation_id: props.simulationId,
-      interviews: interviews
-    })
-    
+      interviews,
+    });
+
     if (res.success && res.data) {
       // 正确的数据路径: res.data.result.results 是一个对象字典
       // 格式: {"twitter_0": {...}, "reddit_0": {...}, "twitter_1": {...}, ...}
-      const resultData = res.data.result || res.data
-      const resultsDict = resultData.results || resultData
-      
+      const resultData = res.data.result || res.data;
+      const resultsDict = resultData.results || resultData;
+
       // 将对象字典转换为数组格式
-      const surveyResultsList = []
-      
+      const surveyResultsList = [];
+
       for (const interview of interviews) {
-        const agentIdx = interview.agent_id
-        const agent = profiles.value[agentIdx]
-        
+        const agentIdx = interview.agent_id;
+        const agent = profiles.value[agentIdx];
+
         // 优先使用 reddit 平台回复，其次 twitter
-        let responseContent = '无响应'
-        
-        if (typeof resultsDict === 'object' && !Array.isArray(resultsDict)) {
-          const redditKey = `reddit_${agentIdx}`
-          const twitterKey = `twitter_${agentIdx}`
-          const agentResult = resultsDict[redditKey] || resultsDict[twitterKey]
+        let responseContent = "无响应";
+
+        if (typeof resultsDict === "object" && !Array.isArray(resultsDict)) {
+          const redditKey = `reddit_${agentIdx}`;
+          const twitterKey = `twitter_${agentIdx}`;
+          const agentResult = resultsDict[redditKey] || resultsDict[twitterKey];
           if (agentResult) {
-            responseContent = agentResult.response || agentResult.answer || '无响应'
+            responseContent =
+              agentResult.response || agentResult.answer || "无响应";
           }
         } else if (Array.isArray(resultsDict)) {
           // 兼容数组格式
-          const matchedResult = resultsDict.find(r => r.agent_id === agentIdx)
+          const matchedResult = resultsDict.find(
+            (r) => r.agent_id === agentIdx
+          );
           if (matchedResult) {
-            responseContent = matchedResult.response || matchedResult.answer || '无响应'
+            responseContent =
+              matchedResult.response || matchedResult.answer || "无响应";
           }
         }
-        
+
         surveyResultsList.push({
           agent_id: agentIdx,
           agent_name: agent?.username || `Agent ${agentIdx}`,
           profession: agent?.profession,
           question: surveyQuestion.value.trim(),
-          answer: responseContent
-        })
+          answer: responseContent,
+        });
       }
-      
-      surveyResults.value = surveyResultsList
-      addLog(`收到 ${surveyResults.value.length} 条回复`)
+
+      surveyResults.value = surveyResultsList;
+      addLog(`收到 ${surveyResults.value.length} 条回复`);
     } else {
-      throw new Error(res.error || '请求失败')
+      throw new Error(res.error || "请求失败");
     }
   } catch (err) {
-    addLog(`问卷发送失败: ${err.message}`)
+    addLog(`问卷发送失败: ${err.message}`);
   } finally {
-    isSurveying.value = false
+    isSurveying.value = false;
   }
-}
+};
 
 // Load Report Data
 const loadReportData = async () => {
-  if (!props.reportId) return
-  
+  if (!props.reportId) {
+    return;
+  }
+
   try {
-    addLog(`加载报告数据: ${props.reportId}`)
-    
+    addLog(`加载报告数据: ${props.reportId}`);
+
     // Get report info
-    const reportRes = await getReport(props.reportId)
+    const reportRes = await getReport(props.reportId);
     if (reportRes.success && reportRes.data) {
       // Load agent logs to get report outline and sections
-      await loadAgentLogs()
+      await loadAgentLogs();
     }
   } catch (err) {
-    addLog(`加载报告失败: ${err.message}`)
+    addLog(`加载报告失败: ${err.message}`);
   }
-}
+};
 
 const loadAgentLogs = async () => {
-  if (!props.reportId) return
-  
+  if (!props.reportId) {
+    return;
+  }
+
   try {
-    const res = await getAgentLog(props.reportId, 0)
+    const res = await getAgentLog(props.reportId, 0);
     if (res.success && res.data) {
-      const logs = res.data.logs || []
-      
-      logs.forEach(log => {
-        if (log.action === 'planning_complete' && log.details?.outline) {
-          reportOutline.value = log.details.outline
+      const logs = res.data.logs || [];
+
+      logs.forEach((log) => {
+        if (log.action === "planning_complete" && log.details?.outline) {
+          reportOutline.value = log.details.outline;
         }
-        
-        if (log.action === 'section_complete' && log.section_index < 100 && log.details?.content) {
-          generatedSections.value[log.section_index] = log.details.content
+
+        if (
+          log.action === "section_complete" &&
+          log.section_index < 100 &&
+          log.details?.content
+        ) {
+          generatedSections.value[log.section_index] = log.details.content;
         }
-      })
-      
-      addLog('报告数据加载完成')
+      });
+
+      addLog("报告数据加载完成");
     }
   } catch (err) {
-    addLog(`加载报告日志失败: ${err.message}`)
+    addLog(`加载报告日志失败: ${err.message}`);
   }
-}
+};
 
 const loadProfiles = async () => {
-  if (!props.simulationId) return
-  
+  if (!props.simulationId) {
+    return;
+  }
+
   try {
-    const res = await getSimulationProfilesRealtime(props.simulationId, 'reddit')
+    const res = await getSimulationProfilesRealtime(
+      props.simulationId,
+      "reddit"
+    );
     if (res.success && res.data) {
-      profiles.value = res.data.profiles || []
-      addLog(`加载了 ${profiles.value.length} 个模拟个体`)
+      profiles.value = res.data.profiles || [];
+      addLog(`加载了 ${profiles.value.length} 个模拟个体`);
     }
   } catch (err) {
-    addLog(`加载模拟个体失败: ${err.message}`)
+    addLog(`加载模拟个体失败: ${err.message}`);
   }
-}
+};
 
 // Click outside to close dropdown
 const handleClickOutside = (e) => {
-  const dropdown = document.querySelector('.agent-dropdown')
+  const dropdown = document.querySelector(".agent-dropdown");
   if (dropdown && !dropdown.contains(e.target)) {
-    showAgentDropdown.value = false
+    showAgentDropdown.value = false;
   }
-}
+};
 
 // Lifecycle
 onMounted(() => {
-  addLog('Step5 深度互动初始化')
-  loadReportData()
-  loadProfiles()
-  document.addEventListener('click', handleClickOutside)
-})
+  addLog("Step5 深度互动初始化");
+  loadReportData();
+  loadProfiles();
+  document.addEventListener("click", handleClickOutside);
+});
 
 onUnmounted(() => {
-  document.removeEventListener('click', handleClickOutside)
-})
+  document.removeEventListener("click", handleClickOutside);
+});
 
-watch(() => props.reportId, (newId) => {
-  if (newId) {
-    loadReportData()
-  }
-}, { immediate: true })
+watch(
+  () => props.reportId,
+  (newId) => {
+    if (newId) {
+      loadReportData();
+    }
+  },
+  { immediate: true }
+);
 
-watch(() => props.simulationId, (newId) => {
-  if (newId) {
-    loadProfiles()
-  }
-}, { immediate: true })
+watch(
+  () => props.simulationId,
+  (newId) => {
+    if (newId) {
+      loadProfiles();
+    }
+  },
+  { immediate: true }
+);
 </script>
 
 <style scoped>
@@ -963,29 +1030,27 @@ watch(() => props.simulationId, (newId) => {
   height: 100%;
   display: flex;
   flex-direction: column;
-  background: #F8F9FA;
-  font-family: 'Inter', 'Noto Sans SC', system-ui, sans-serif;
+  background: #0a0f1a;
+  font-family: 'Inter', sans-serif;
+  color: #e8f1f5;
   overflow: hidden;
 }
 
-/* Utility Classes */
 .mono {
-  font-family: 'JetBrains Mono', 'SF Mono', 'Monaco', 'Consolas', monospace;
+  font-family: 'JetBrains Mono', monospace;
 }
 
-/* Main Split Layout */
 .main-split-layout {
   flex: 1;
   display: flex;
   overflow: hidden;
 }
 
-/* Left Panel - Report Style (与 Step4Report.vue 完全一致) */
 .left-panel.report-style {
   width: 45%;
   min-width: 450px;
-  background: #FFFFFF;
-  border-right: 1px solid #E5E7EB;
+  background: rgba(255, 255, 255, 0.03);
+  border-right: 1px solid rgba(125, 211, 192, 0.15);
   overflow-y: auto;
   display: flex;
   flex-direction: column;
@@ -1007,11 +1072,11 @@ watch(() => props.simulationId, (newId) => {
 }
 
 .left-panel:hover::-webkit-scrollbar-thumb {
-  background: rgba(0, 0, 0, 0.15);
+  background: rgba(125, 211, 192, 0.2);
 }
 
 .left-panel::-webkit-scrollbar-thumb:hover {
-  background: rgba(0, 0, 0, 0.25);
+  background: rgba(125, 211, 192, 0.3);
 }
 
 /* Report Header */
