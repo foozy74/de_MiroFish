@@ -26,46 +26,56 @@ def _get_shared_db_path() -> str:
 
 def _get_conn():
     """Erstellt eine Verbindung zur shared.db."""
-    conn = sqlite3.connect(_get_shared_db_path())
-    conn.row_factory = sqlite3.Row
-    return conn
+    try:
+        conn = sqlite3.connect(_get_shared_db_path())
+        conn.row_factory = sqlite3.Row
+        return conn
+    except Exception as e:
+        logger.error(f"Fehler beim Verbinden mit der shared.db: {e}")
+        raise
 
 def init_shared_db():
     """Initialisiert die Tabellen in der shared.db falls sie nicht existieren."""
-    conn = _get_conn()
     try:
-        cursor = conn.cursor()
-        # Tabelle für Tenants
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS tenants (
-                id TEXT PRIMARY KEY,
-                clerk_org_id TEXT UNIQUE NOT NULL,
-                clerk_org_slug TEXT,
-                display_name TEXT NOT NULL,
-                schema_name TEXT UNIQUE NOT NULL,
-                plan TEXT DEFAULT 'free',
-                status TEXT DEFAULT 'active',
-                config_overrides TEXT DEFAULT '{}',
-                created_at TEXT DEFAULT (datetime('now')),
-                updated_at TEXT DEFAULT (datetime('now'))
-            )
-        """)
-        # Tabelle für verschlüsselte API-Keys
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS tenant_api_keys (
-                id TEXT PRIMARY KEY,
-                tenant_id TEXT REFERENCES tenants(id) ON DELETE CASCADE,
-                key_name TEXT NOT NULL,
-                encrypted_value BLOB NOT NULL,
-                iv BLOB NOT NULL,
-                created_at TEXT DEFAULT (datetime('now')),
-                updated_at TEXT DEFAULT (datetime('now')),
-                UNIQUE(tenant_id, key_name)
-            )
-        """)
-        conn.commit()
-    finally:
-        conn.close()
+        conn = _get_conn()
+        try:
+            cursor = conn.cursor()
+            # Tabelle für Tenants
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS tenants (
+                    id TEXT PRIMARY KEY,
+                    clerk_org_id TEXT UNIQUE NOT NULL,
+                    clerk_org_slug TEXT,
+                    display_name TEXT NOT NULL,
+                    schema_name TEXT UNIQUE NOT NULL,
+                    plan TEXT DEFAULT 'free',
+                    status TEXT DEFAULT 'active',
+                    config_overrides TEXT DEFAULT '{}',
+                    created_at TEXT DEFAULT (datetime('now')),
+                    updated_at TEXT DEFAULT (datetime('now'))
+                )
+            """)
+            # Tabelle für verschlüsselte API-Keys
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS tenant_api_keys (
+                    id TEXT PRIMARY KEY,
+                    tenant_id TEXT REFERENCES tenants(id) ON DELETE CASCADE,
+                    key_name TEXT NOT NULL,
+                    encrypted_value BLOB NOT NULL,
+                    iv BLOB NOT NULL,
+                    created_at TEXT DEFAULT (datetime('now')),
+                    updated_at TEXT DEFAULT (datetime('now')),
+                    UNIQUE(tenant_id, key_name)
+                )
+            """)
+            conn.commit()
+        finally:
+            conn.close()
+    except Exception as e:
+        logger.error(f"Fehler bei der Initialisierung der shared.db: {e}")
+        # Wir lassen den Fehler hier nicht die Anwendung komplett stoppen, 
+        # damit der Healthcheck eventuell noch funktionieren kann (für Debugging)
+
 
 def get_tenant_from_db(org_id: str) -> Optional[TenantContext]:
     """Lädt Tenant-Metadaten aus der lokalen SQLite shared.db."""

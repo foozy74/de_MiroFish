@@ -64,15 +64,22 @@ def setup_logger(name: str = 'mirofish', level: int = logging.DEBUG) -> logging.
     )
     
     # 1. Datei-Handler - Detaillierte Protokolle (nach Datum benannt, mit Rotation)
-    log_filename = datetime.now().strftime('%Y-%m-%d') + '.log'
-    file_handler = RotatingFileHandler(
-        os.path.join(LOG_DIR, log_filename),
-        maxBytes=10 * 1024 * 1024,  # 10MB
-        backupCount=5,
-        encoding='utf-8'
-    )
-    file_handler.setLevel(logging.DEBUG)
-    file_handler.setFormatter(detailed_formatter)
+    try:
+        log_filename = datetime.now().strftime('%Y-%m-%d') + '.log'
+        file_path = os.path.join(LOG_DIR, log_filename)
+        file_handler = RotatingFileHandler(
+            file_path,
+            maxBytes=10 * 1024 * 1024,  # 10MB
+            backupCount=5,
+            encoding='utf-8'
+        )
+        file_handler.setLevel(logging.DEBUG)
+        file_handler.setFormatter(detailed_formatter)
+        logger.addHandler(file_handler)
+    except Exception as e:
+        # Wenn wir nicht in eine Datei schreiben können (z.B. Berechtigungsprobleme bei Bind-Mounts),
+        # loggen wir nur auf die Konsole.
+        print(f"WARNUNG: Konnte Datei-Logger nicht initialisieren (eventuell fehlende Schreibrechte): {e}")
     
     # 2. Konsolen-Handler - Kurzformat (INFO und höher)
     # Stellt sicher, dass unter Windows UTF-8-Kodierung verwendet wird, um Zeichencodierungsprobleme zu vermeiden
@@ -82,7 +89,6 @@ def setup_logger(name: str = 'mirofish', level: int = logging.DEBUG) -> logging.
     console_handler.setFormatter(simple_formatter)
     
     # Fügt Handler hinzu
-    logger.addHandler(file_handler)
     logger.addHandler(console_handler)
     
     return logger
