@@ -39,7 +39,7 @@ RUN printf 'server {\n\
 \n\
     # API-Proxy → MiroFish Backend\n\
     location /api/ {\n\
-        set $upstream_backend backend;\n\
+        set $upstream_backend mirofish-backend;\n\
         proxy_pass         http://$upstream_backend:5001/api/;\n\
         proxy_set_header   Host              $host;\n\
         proxy_set_header   X-Real-IP         $remote_addr;\n\
