@@ -3,9 +3,6 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    container_name: mirofish-backend
-    env_file:
-      - .env
     environment:
       - UV_SYSTEM_PYTHON=1
       - MIROFISH_ENV=production
@@ -22,14 +19,6 @@ services:
       timeout: 10s
       retries: 3
       start_period: 120s
-    deploy:
-      resources:
-        limits:
-          cpus: "2.0"
-          memory: 4G
-        reservations:
-          cpus: "0.5"
-          memory: 1G
     networks:
       - mirofish-net
 
@@ -37,7 +26,6 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
-    container_name: mirofish-frontend
     depends_on:
       backend:
         condition: service_healthy
@@ -45,20 +33,11 @@ services:
       - "3000:3000"
     restart: unless-stopped
     healthcheck:
-      # Wir prüfen einfach, ob Nginx auf Port 3000 antwortet
       test: ["CMD-SHELL", "wget -q --spider http://localhost:3000 || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 5
       start_period: 60s
-    deploy:
-      resources:
-        limits:
-          cpus: "1.0"
-          memory: 512M
-        reservations:
-          cpus: "0.25"
-          memory: 256M
     networks:
       - mirofish-net
 
