@@ -27,6 +27,9 @@ class Config:
     # JSON-Konfiguration - Deaktiviert ASCII-Escape, damit chinesische Zeichen direkt angezeigt werden (statt \uXXXX-Format)
     JSON_AS_ASCII = False
     
+    # Projekt-Konfiguration
+    MIROFISH_ENV = os.environ.get('MIROFISH_ENV', 'production').lower()
+
     # LLM-Konfiguration (einheitliches OpenAI-Format)
     LLM_API_KEY = os.environ.get('LLM_API_KEY')
     LLM_BASE_URL = os.environ.get('LLM_BASE_URL', 'https://api.openai.com/v1')
@@ -66,6 +69,10 @@ class Config:
     @classmethod
     def validate(cls):
         """Validiert erforderliche Konfigurationen"""
+        # Im Entwicklungsmodus ist die Validierung weniger streng
+        if cls.MIROFISH_ENV == 'development':
+            return []
+            
         errors = []
         if not cls.LLM_API_KEY:
             errors.append("LLM_API_KEY nicht konfiguriert")
