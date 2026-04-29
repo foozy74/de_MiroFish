@@ -4,15 +4,13 @@
     <nav class="navbar">
       <div class="nav-brand">MIROFISH</div>
       <div class="nav-links">
-        <SignedOut>
-          <router-link to="/login" class="login-btn">Anmelden</router-link>
-        </SignedOut>
-        <SignedIn>
-          <div class="user-control">
+        <template v-if="auth.isLoaded.value">
+          <router-link v-if="!auth.isSignedIn.value" to="/login" class="login-btn">Anmelden</router-link>
+          <div v-else class="user-control">
             <router-link to="/settings" class="settings-link">Einstellungen</router-link>
             <UserButton after-sign-out-url="/" />
           </div>
-        </SignedIn>
+        </template>
       </div>
     </nav>
 
@@ -215,9 +213,10 @@
 <script setup>
 import { computed, ref } from "vue";
 import { useRouter } from "vue-router";
-import { SignedIn, SignedOut, UserButton } from '@clerk/vue'
+import { UserButton, useAuth } from '@clerk/vue'
 
 const router = useRouter();
+const auth = useAuth();
 
 // Formulardaten
 const formData = ref({
