@@ -34,11 +34,11 @@ RUN uv export --frozen --no-dev -o requirements.txt && \
 # Anwendungscode kopieren
 COPY --chown=mirofish:mirofish . .
 
+# Erforderliche Verzeichnisse erstellen und Berechtigungen setzen
+RUN mkdir -p uploads logs && chown -R mirofish:mirofish uploads logs
+
 # Non-root Benutzer
 USER mirofish
-
-# Erforderliche Verzeichnisse erstellen
-RUN mkdir -p uploads logs
 
 EXPOSE 5001
 

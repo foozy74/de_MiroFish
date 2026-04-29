@@ -13,9 +13,8 @@ services:
     ports:
       - "5001:5001"
     volumes:
-      - ./backend/uploads:/app/uploads
-      - ./backend/logs:/app/logs
-      - /app/.venv
+      - mirofish-uploads:/app/uploads
+      - mirofish-logs:/app/logs
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:5001/health"]
@@ -46,11 +45,12 @@ services:
       - "3000:3000"
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3000"]
+      # Wir prüfen einfach, ob Nginx auf Port 3000 antwortet
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:3000 || exit 1"]
       interval: 30s
-      timeout: 5s
-      retries: 3
-      start_period: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
     deploy:
       resources:
         limits:
@@ -62,7 +62,9 @@ services:
     networks:
       - mirofish-net
 
-# Volumes are now bind-mounted for local testing
+volumes:
+  mirofish-uploads:
+  mirofish-logs:
 
 networks:
   mirofish-net:
